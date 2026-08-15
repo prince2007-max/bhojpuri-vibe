@@ -1851,7 +1851,13 @@
                 <h3 class="drawer-title" id="drawerHeaderTitle">🎵 PLAYLIST QUEUE</h3>
                 <span class="drawer-subtitle-badge" id="drawerHeaderBadge">Loading tracks...</span>
             </div>
-            <button class="close-btn" id="closeQueueBtn" title="Close Queue">&times;</button>
+            <div class="drawer-header-right" style="display:flex;align-items:center;gap:8px;">
+                <button class="util-icon-btn" id="manualSyncBtn" title="Sync Live YouTube Playlist" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <span id="syncIcon" style="display:inline-block;transition:transform 0.5s ease;">🔄</span>
+                    <span id="syncStatusMsg">Sync</span>
+                </button>
+                <button class="close-btn" id="closeQueueBtn" title="Close Queue">&times;</button>
+            </div>
         </div>
         <div class="playlist-items-list" id="playlistDrawerList">
             <!-- Populated dynamically via YouTube API -->
@@ -2356,79 +2362,173 @@
         }
         validateLivePlaylists();
 
-        // DYNAMIC LIVE CONNECTED PLAYLIST SYNC ENGINE (YOUTUBE = SINGLE SOURCE OF TRUTH)
+        // LOCAL STORAGE CACHE ENGINE
+        function getLocalPlaylistCache(artistId) {
+            try {
+                const raw = localStorage.getItem('bv_playlist_' + artistId);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        function setLocalPlaylistCache(artistId, items) {
+            try {
+                localStorage.setItem('bv_playlist_' + artistId, JSON.stringify(items));
+            } catch(e) {}
+        }
+
+        // TRUE LIVE CONNECTED PLAYLIST SYNC ENGINE (YOUTUBE = SINGLE SOURCE OF TRUTH)
+        let syncInProgress = false;
+        let currentSyncVersion = 0;
         let liveSyncTimer = null;
 
-        function syncLivePlaylist(artistKey = currentSingerId, autoPlay = false, isBackground = false) {
+        function syncLivePlaylist(artistKey = currentSingerId, autoPlay = false, isBackground = false, forceRefresh = false) {
             const singer = PLAYLISTS[artistKey] || PLAYLISTS.khesari;
             const playlistId = singer.playlistId;
             if (!playlistId) return;
 
-            const endpoint = `/api/playlists/${singer.id}`;
+            if (syncInProgress && !forceRefresh) {
+                console.log("[PLAYLIST SYNC] Sync already in progress, skipping duplicate request");
+                return;
+            }
+
+            syncInProgress = true;
+            const thisVersion = ++currentSyncVersion;
+
+            // 1. FAST INITIAL PRESENTATION FROM LOCAL CACHE IF STORE IS EMPTY
+            if ((!playlistStore || playlistStore.length === 0) && !isBackground) {
+                const localCached = getLocalPlaylistCache(singer.id);
+                if (localCached && localCached.length > 0) {
+                    playlistStore = localCached;
+                    renderPlaylistDrawer();
+                    syncCurrentVideoMetadata();
+                }
+            }
+
+            const syncBtn = document.getElementById('manualSyncBtn');
+            const syncStatusMsg = document.getElementById('syncStatusMsg');
+            const syncIcon = document.getElementById('syncIcon');
+
+            if (syncStatusMsg) syncStatusMsg.textContent = "Syncing...";
+            if (syncIcon) syncIcon.style.transform = "rotate(180deg)";
+
+            const endpoint = `/api/playlists/${singer.id}?refresh=${forceRefresh || isBackground ? 'true' : 'false'}&t=${Date.now()}`;
+
+            console.log(`[PLAYLIST SYNC] Starting fresh sync for ${singer.name} (${singer.id})`);
 
             fetch(endpoint)
                 .then(res => res.json())
                 .then(data => {
+                    syncInProgress = false;
+                    if (thisVersion !== currentSyncVersion) {
+                        console.log("[PLAYLIST SYNC] Out-of-order response discarded");
+                        return;
+                    }
+
                     const newItems = (data && Array.isArray(data.items) && data.items.length > 0) ? data.items : null;
-                    
+                    const pagesFetched = data.pagesFetched || 1;
+
                     if (newItems) {
-                        if (isBackground && playlistStore && playlistStore.length > 0) {
-                            // NEW & REMOVED SONG DETECTION WITH PLAYBACK PRESERVATION
-                            const activeTrack = playlistStore[currentTrackIndex];
-                            const prevCount = playlistStore.length;
-                            
-                            playlistStore = newItems;
+                        const oldStore = playlistStore || [];
+                        const oldVideoIds = new Set(oldStore.map(item => item.videoId));
+                        const newVideoIds = new Set(newItems.map(item => item.videoId));
 
-                            if (activeTrack) {
-                                const newIdx = playlistStore.findIndex(item => item.videoId === activeTrack.videoId);
-                                if (newIdx !== -1) {
-                                    currentTrackIndex = newIdx;
-                                }
+                        // Compare old vs new
+                        const addedItems = newItems.filter(item => !oldVideoIds.has(item.videoId));
+                        const removedItems = oldStore.filter(item => !newVideoIds.has(item.videoId));
+
+                        console.log(`[PLAYLIST SYNC] Fetched pages: ${pagesFetched}`);
+                        console.log(`[PLAYLIST SYNC] YouTube items: ${newItems.length}`);
+                        console.log(`[PLAYLIST SYNC] Previous items: ${oldStore.length}`);
+                        console.log(`[PLAYLIST SYNC] New items: ${addedItems.length}`);
+                        console.log(`[PLAYLIST SYNC] Removed items: ${removedItems.length}`);
+
+                        // Preserve active playback track index
+                        const activeTrack = oldStore[currentTrackIndex];
+                        playlistStore = newItems;
+
+                        if (activeTrack) {
+                            const newIdx = playlistStore.findIndex(item => item.videoId === activeTrack.videoId);
+                            if (newIdx !== -1) {
+                                currentTrackIndex = newIdx;
                             }
+                        }
 
-                            if (prevCount !== newItems.length) {
-                                debugLog(`[LIVE SYNC] Playlist updated: ${prevCount} → ${newItems.length} tracks.`);
+                        // Save fresh data to local cache
+                        setLocalPlaylistCache(singer.id, newItems);
+
+                        // Update UI
+                        renderPlaylistDrawer();
+                        syncCurrentVideoMetadata();
+
+                        console.log("[PLAYLIST SYNC] UI updated");
+                        console.log("[PLAYLIST SYNC] Cache updated");
+
+                        if (syncStatusMsg) {
+                            if (addedItems.length > 0) {
+                                syncStatusMsg.textContent = `+${addedItems.length} New`;
+                            } else if (removedItems.length > 0) {
+                                syncStatusMsg.textContent = `-${removedItems.length} Removed`;
+                            } else {
+                                syncStatusMsg.textContent = "Up to date";
                             }
+                        }
 
-                            renderPlaylistDrawer();
-                            syncCurrentVideoMetadata();
-                        } else {
-                            // INITIAL LOAD OR SINGER SWITCH
-                            playlistStore = newItems;
-                            currentTrackIndex = 0;
-                            renderPlaylistDrawer();
-                            syncCurrentVideoMetadata();
-
-                            if (autoPlay && ytPlayerReady && ytPlayer && playlistStore[0] && playlistStore[0].videoId) {
-                                try {
-                                    ytPlayer.loadVideoById(playlistStore[0].videoId);
-                                    playAudio();
-                                } catch(e) {}
-                            }
+                        if (autoPlay && !isBackground && ytPlayerReady && ytPlayer && playlistStore[0] && playlistStore[0].videoId) {
+                            try {
+                                ytPlayer.loadVideoById(playlistStore[0].videoId);
+                                playAudio();
+                            } catch(e) {}
                         }
                         return;
                     }
+
+                    if (syncStatusMsg) syncStatusMsg.textContent = "Sync failed";
                     if (!isBackground) fallbackSyncFromPlayer();
                 })
-                .catch(() => {
-                    console.warn("[BHOJPURI VIBE] Playlist sync temporarily unavailable");
+                .catch(err => {
+                    syncInProgress = false;
+                    console.warn("[PLAYLIST SYNC] Error fetching live playlist:", err.message);
+                    if (syncStatusMsg) syncStatusMsg.textContent = "Offline";
                     if (!isBackground && (!playlistStore || playlistStore.length === 0)) {
                         fallbackSyncFromPlayer();
                     }
+                })
+                .finally(() => {
+                    if (syncIcon) syncIcon.style.transform = "rotate(0deg)";
+                    setTimeout(() => {
+                        if (syncStatusMsg && (syncStatusMsg.textContent.includes('Up to date') || syncStatusMsg.textContent.includes('New') || syncStatusMsg.textContent.includes('Removed') || syncStatusMsg.textContent.includes('Syncing'))) {
+                            syncStatusMsg.textContent = "Sync";
+                        }
+                    }, 4000);
                 });
         }
 
         // Periodic Background Sync Timer (Every 3 minutes)
         if (!liveSyncTimer) {
             liveSyncTimer = setInterval(() => {
-                syncLivePlaylist(currentSingerId, false, true);
+                syncLivePlaylist(currentSingerId, false, true, true);
             }, 180000);
         }
 
         // Tab Visibility Change Sync (Refresh live playlist when user returns to tab)
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-                syncLivePlaylist(currentSingerId, false, true);
+                syncLivePlaylist(currentSingerId, false, true, true);
+            }
+        });
+
+        // Manual Refresh Button Event Listener
+        document.addEventListener('DOMContentLoaded', () => {
+            const manualBtn = document.getElementById('manualSyncBtn');
+            if (manualBtn) {
+                manualBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    syncLivePlaylist(currentSingerId, false, false, true);
+                });
             }
         });
 

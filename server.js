@@ -155,6 +155,10 @@ const PLAYLIST_SOURCES = {
 
 // Dynamic Playlist Endpoint: GET /api/playlists/:artist
 app.get('/api/playlists/:artist', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const artistKey = req.params.artist;
     const source = PLAYLIST_SOURCES[artistKey];
 
@@ -163,55 +167,95 @@ app.get('/api/playlists/:artist', (req, res) => {
     }
 
     const playlistId = source.playlistId;
-    if (playlistCache.has(playlistId)) {
-        const cached = playlistCache.get(playlistId);
+    const forceRefresh = req.query.refresh === 'true' || req.query.force === 'true';
+    const cached = playlistCache.get(playlistId);
+    const CACHE_TTL_MS = 30000; // 30 seconds TTL for live YouTube sync
+
+    if (!forceRefresh && cached && cached.items && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
         return res.json({
             artist: source,
             items: cached.items,
             totalItems: cached.items.length,
-            pagesFetched: cached.pagesFetched || 1
+            pagesFetched: cached.pagesFetched || 1,
+            fromCache: true,
+            cachedAt: new Date(cached.timestamp).toISOString()
         });
     }
 
     fetchYouTubePlaylistFeed(playlistId, (items, pagesFetched) => {
         if (items && items.length > 0) {
-            const payload = { items, pagesFetched: pagesFetched || 1 };
+            const payload = { items, pagesFetched: pagesFetched || 1, timestamp: Date.now() };
             setBoundedCache(playlistCache, playlistId, payload);
             return res.json({
                 artist: source,
                 items,
                 totalItems: items.length,
-                pagesFetched: pagesFetched || 1
+                pagesFetched: pagesFetched || 1,
+                fromCache: false,
+                fetchedAt: new Date().toISOString()
             });
         }
+        
+        // Fallback to stale cached data if YouTube fetch temporarily fails
+        if (cached && cached.items) {
+            return res.json({
+                artist: source,
+                items: cached.items,
+                totalItems: cached.items.length,
+                pagesFetched: cached.pagesFetched || 1,
+                fromCache: true,
+                staleFallback: true
+            });
+        }
+
         res.json({ artist: source, items: [], totalItems: 0, pagesFetched: 0 });
     });
 });
 
 // YouTube Playlist Items Proxy Endpoint
 app.get('/api/playlist-items', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const playlistId = req.query.id;
     if (!playlistId) return res.status(400).json({ error: "Missing playlist ID" });
 
-    if (playlistCache.has(playlistId)) {
-        const cached = playlistCache.get(playlistId);
+    const forceRefresh = req.query.refresh === 'true';
+    const cached = playlistCache.get(playlistId);
+    const CACHE_TTL_MS = 30000;
+
+    if (!forceRefresh && cached && cached.items && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
         return res.json({
             items: cached.items,
             totalItems: cached.items.length,
-            pagesFetched: cached.pagesFetched || 1
+            pagesFetched: cached.pagesFetched || 1,
+            fromCache: true
         });
     }
 
     fetchYouTubePlaylistFeed(playlistId, (items, pagesFetched) => {
         if (items && items.length > 0) {
-            const payload = { items, pagesFetched: pagesFetched || 1 };
+            const payload = { items, pagesFetched: pagesFetched || 1, timestamp: Date.now() };
             setBoundedCache(playlistCache, playlistId, payload);
             return res.json({
                 items,
                 totalItems: items.length,
-                pagesFetched: pagesFetched || 1
+                pagesFetched: pagesFetched || 1,
+                fromCache: false
             });
         }
+
+        if (cached && cached.items) {
+            return res.json({
+                items: cached.items,
+                totalItems: cached.items.length,
+                pagesFetched: cached.pagesFetched || 1,
+                fromCache: true,
+                staleFallback: true
+            });
+        }
+
         res.json({ items: [], totalItems: 0, pagesFetched: 0 });
     });
 });
