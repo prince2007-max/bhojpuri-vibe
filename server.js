@@ -134,6 +134,57 @@ app.get('/api/yt-metadata', (req, res) => {
             author: "Bhojpuri Vibe",
             thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
         });
+// YouTube Playlist Items Proxy Endpoint (Fetches full list of track video IDs, titles & authors)
+const playlistCache = new Map();
+
+app.get('/api/playlist-items', (req, res) => {
+    const playlistId = req.query.id;
+    if (!playlistId) return res.status(400).json({ error: "Missing playlist ID" });
+
+    if (playlistCache.has(playlistId)) {
+        return res.json(playlistCache.get(playlistId));
+    }
+
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+    https.get(feedUrl, (ytRes) => {
+        let body = "";
+        ytRes.on('data', chunk => body += chunk);
+        ytRes.on('end', () => {
+            try {
+                const items = [];
+                const entries = body.split('<entry>');
+                entries.slice(1).forEach((entry, idx) => {
+                    const idMatch = entry.match(/<yt:videoId>(.*?)<\/yt:videoId>/);
+                    const titleMatch = entry.match(/<title>(.*?)<\/title>/);
+                    const authorMatch = entry.match(/<name>(.*?)<\/name>/);
+
+                    if (idMatch && idMatch[1]) {
+                        const videoId = idMatch[1];
+                        const rawTitle = titleMatch ? titleMatch[1] : `Track ${idx + 1}`;
+                        const title = rawTitle.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                        const author = authorMatch ? authorMatch[1] : "Bhojpuri Vibe";
+
+                        items.push({
+                            id: idx + 1,
+                            videoId: videoId,
+                            title: title,
+                            artist: author,
+                            thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                        });
+                    }
+                });
+
+                if (items.length > 0) {
+                    playlistCache.set(playlistId, { items });
+                    return res.json({ items });
+                }
+                res.json({ items: [] });
+            } catch (err) {
+                res.json({ items: [] });
+            }
+        });
+    }).on('error', (e) => {
+        res.json({ items: [] });
     });
 });
 

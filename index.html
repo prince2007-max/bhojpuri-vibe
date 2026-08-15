@@ -2312,8 +2312,28 @@
             }, 150);
         }
 
-        // 3. DYNAMIC YOUTUBE PLAYLIST SYNC (STRICT NO MIXING)
+        // 3. DYNAMIC YOUTUBE PLAYLIST SYNC (FULL PLAYLIST RSS PARSING)
         function syncPlaylistFromYouTube() {
+            const playlistId = YOUTUBE_PLAYLIST_ID;
+            if (!playlistId) return;
+
+            fetch(`/api/playlist-items?id=${playlistId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && Array.isArray(data.items) && data.items.length > 0) {
+                        playlistStore = data.items;
+                        renderPlaylistDrawer();
+                        syncCurrentVideoMetadata();
+                        return;
+                    }
+                    fallbackSyncFromPlayer();
+                })
+                .catch(() => {
+                    fallbackSyncFromPlayer();
+                });
+        }
+
+        function fallbackSyncFromPlayer() {
             if (!ytPlayerReady || !ytPlayer || !ytPlayer.getPlaylist) return;
             const ids = ytPlayer.getPlaylist();
             if (Array.isArray(ids) && ids.length > 0) {
@@ -2331,7 +2351,6 @@
                 renderPlaylistDrawer();
                 syncCurrentVideoMetadata();
 
-                // Fetch metadata for all tracks from YouTube oEmbed API
                 playlistStore.forEach((item) => {
                     fetch(`/api/yt-metadata?id=${item.videoId}`)
                         .then(res => res.json())
