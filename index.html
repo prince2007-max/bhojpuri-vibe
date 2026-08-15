@@ -1521,7 +1521,7 @@
             <!-- VERY COMPACT SMALL FLOATING CENTER CAPSULE (PLACED IN FLEX SCENE FLOW) -->
             <div class="small-center-capsule" id="smallCenterCapsule">
                 <div class="capsule-thumb-wrap">
-                    <img src="assets/images/hero_poster.jpg" alt="Vibe" id="capsuleBannerThumb" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' fill=\'%23333\'><rect width=\'100\' height=\'100\'/></svg>'">
+                    <img src="assets/images/hero_poster.jpg" alt="Vibe" id="capsuleBannerThumb" onerror="handleImgError(this, '%23333')">
                 </div>
                 <div class="capsule-text-info">
                     <h5 class="capsule-banner-title" id="capsuleBannerTitle">Desi Bhojpuri Vibe</h5>
@@ -1844,6 +1844,13 @@
            BHOJPURI VIBE — YOUTUBE PLAYLIST METADATA & REAL PRESENCE ENGINE
            ========================================================================== */
 
+        // Global Image Error Fallback Handler (Prevents 'Unexpected identifier http' SyntaxErrors)
+        function handleImgError(el, color = '%23222') {
+            if (!el) return;
+            el.onerror = null;
+            el.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="${color}"><rect width="100" height="100"/></svg>`;
+        }
+
         // BHOJPURI SINGER PLAYLIST CONFIGURATION & ARTWORK
         const SINGER_PLAYLISTS = [
             {
@@ -2159,7 +2166,8 @@
                     fs: 0,
                     modestbranding: 1,
                     rel: 0,
-                    playsinline: 1
+                    playsinline: 1,
+                    origin: window.location.origin
                 },
                 events: {
                     'onReady': () => {
@@ -2451,7 +2459,7 @@
                 row.setAttribute('data-video-id', song.videoId);
                 row.innerHTML = `
                     <span class="item-num">${trackNum}</span>
-                    <img src="${ytThumb}" alt="${song.title}" class="item-thumb" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'60\' height=\'60\' fill=\'%23222\'><rect width=\'60\' height=\'60\'/></svg>'">
+                    <img src="${ytThumb}" alt="${song.title}" class="item-thumb" onerror="handleImgError(this, '%23222')">
                     <div class="item-info">
                         <span class="item-title">${song.title}</span>
                         <span class="item-artist">${song.artist}</span>
@@ -2642,7 +2650,7 @@
                 item.className = `singer-option-item ${isActive ? 'active' : ''}`;
                 item.setAttribute('data-singer-id', singer.id);
                 item.innerHTML = `
-                    <img src="${singer.image}" alt="${singer.name}" class="singer-avatar" onerror="this.src='${singer.fallbackSvg}'">
+                    <img src="${singer.image}" alt="${singer.name}" class="singer-avatar" onerror="handleImgError(this, '%23333')">
                     <div class="singer-info">
                         <span class="singer-name">${singer.name}</span>
                         <span class="singer-subtitle">${singer.subtitle}</span>
