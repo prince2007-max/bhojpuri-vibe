@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="ogBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#140404" />
+      <stop offset="60%" stop-color="#08080A" />
+      <stop offset="100%" stop-color="#040406" />
+    </linearGradient>
+
+    <linearGradient id="ogTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FCD34D" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D62828" />
+    </linearGradient>
+
+    <linearGradient id="glowCircle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D62828" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#F59E0B" stop-opacity="0.0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="1200" height="630" fill="url(#ogBg)" />
+
+  <!-- Ambient Glow Circles -->
+  <circle cx="200" cy="150" r="300" fill="url(#glowCircle)" />
+  <circle cx="1000" cy="480" r="350" fill="url(#glowCircle)" />
+
+  <!-- Glass Card Wrapper -->
+  <rect x="80" y="70" width="1040" height="490" rx="36" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="2" />
+
+  <!-- BV Brand Logo Icon -->
+  <g transform="translate(130, 155)">
+    <rect width="200" height="200" rx="48" fill="#08080A" stroke="url(#ogTextGrad)" stroke-width="6" />
+    <g transform="translate(22, 32)">
+      <path d="M 18 18 L 68 18 C 95 18, 108 38, 98 62 C 92 76, 78 82, 65 84 C 88 86, 105 98, 105 125 C 105 156, 80 165, 18 165 Z" fill="none" stroke="url(#ogTextGrad)" stroke-width="20" stroke-linejoin="round" stroke-linecap="round" />
+      <path d="M 112 18 L 145 165 L 178 18" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linejoin="round" stroke-linecap="round" />
+    </g>
+  </g>
+
+  <!-- Typography & Social Copy -->
+  <text x="370" y="240" font-family="Plus Jakarta Sans, sans-serif" font-weight="900" font-size="64" fill="url(#ogTextGrad)" letter-spacing="4">BHOJPURI VIBE</text>
+  <text x="370" y="305" font-family="Plus Jakarta Sans, sans-serif" font-weight="700" font-size="28" fill="#FFFFFF" opacity="0.9" letter-spacing="2">SAFAR PURANA. GAANE NAYE.</text>
+  
+  <text x="370" y="375" font-family="Plus Jakarta Sans, sans-serif" font-weight="500" font-size="22" fill="#9CA3AF">Experience Khesari Lal, Pawan Singh &amp; Top Bhojpuri Hits</text>
+
+  <!-- Audio Waveform Decorative Bars -->
+  <g transform="translate(370, 420)">
+    <rect x="0" y="20" width="8" height="40" rx="4" fill="#D62828" />
+    <rect x="16" y="0" width="8" height="60" rx="4" fill="#F59E0B" />
+    <rect x="32" y="10" width="8" height="50" rx="4" fill="#FCD34D" />
+    <rect x="48" y="25" width="8" height="35" rx="4" fill="#FFFFFF" opacity="0.8" />
+    <rect x="64" y="5" width="8" height="55" rx="4" fill="#D62828" />
+    <rect x="80" y="18" width="8" height="42" rx="4" fill="#F59E0B" />
+    <rect x="96" y="28" width="8" height="32" rx="4" fill="#FCD34D" />
+  </g>
+
+  <!-- Badge Pill -->
+  <g transform="translate(850, 155)">
+    <rect width="180" height="44" rx="22" fill="rgba(214, 40, 40, 0.25)" stroke="#D62828" stroke-width="2" />
+    <circle cx="28" cy="22" r="6" fill="#D62828" />
+    <text x="44" y="28" font-family="Plus Jakarta Sans, sans-serif" font-weight="800" font-size="14" fill="#FFFFFF" letter-spacing="1.5">LIVE STREAM</text>
+  </g>
+</svg>

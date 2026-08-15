@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -6,6 +7,8 @@ const https = require('https');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Enable Gzip/Brotli Compression for text assets
+app.use(compression());
 app.use(express.json());
 
 // Parse .env file if available locally
@@ -23,9 +26,16 @@ if (fs.existsSync(envPath)) {
 const PLAYLIST_ID = process.env.YOUTUBE_PLAYLIST_ID || "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb";
 const BG_VIDEO = process.env.BACKGROUND_ANIMATION || "/video/bhojpuri-bg.mp4";
 
-// Serve static files from root directory & /video endpoint
-app.use(express.static(path.join(__dirname)));
-app.use('/video', express.static(path.join(__dirname, 'video')));
+// Static asset caching options (1 day browser cache for static files)
+const staticOptions = {
+    maxAge: '1d',
+    etag: true
+};
+
+// Serve static files from root directory & /video endpoint with caching
+app.use(express.static(path.join(__dirname), staticOptions));
+app.use('/video', express.static(path.join(__dirname, 'video'), staticOptions));
+app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
 
 // Explicit homepage route to guarantee root index.html is served on Render
 app.get('/', (req, res) => {

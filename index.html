@@ -5,8 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>BHOJPURI VIBE — Safar Purana. Gaane Naye. | Official Music Platform</title>
     <meta name="description" content="Experience premium cinematic Bhojpuri music powered by the fixed YouTube playlist PLHoEe5Zf1FIc.">
-    <meta name="keywords" content="Bhojpuri Vibe, Pawan Singh, Khesari Lal, Desi Music, YouTube Playlist Player">
-    
+    <!-- BRAND FAVICON & MOBILE ICONS -->
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/images/favicon.svg">
+
+    <!-- OPEN GRAPH / SOCIAL PREVIEW METADATA -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BHOJPURI VIBE — Safar Purana. Gaane Naye.">
+    <meta property="og:description" content="Experience premium cinematic Bhojpuri music powered by dynamic singer playlists & live radio vibes.">
+    <meta property="og:image" content="/assets/images/og-preview.svg">
+    <meta property="og:url" content="https://bhojpuri-vibe.onrender.com">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="BHOJPURI VIBE — Safar Purana. Gaane Naye.">
+    <meta name="twitter:description" content="Experience premium cinematic Bhojpuri music powered by dynamic singer playlists & live radio vibes.">
+    <meta name="twitter:image" content="/assets/images/og-preview.svg">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1451,8 +1464,8 @@
 
         <!-- 1. FULL-SCREEN BACKGROUND VIDEO LAYER -->
         <div class="video-bg-container" id="videoBgContainer">
-            <!-- PLAYS ONCE — NO LOOP — NO BLUR — SHARP STATIC FINAL FRAME -->
-            <video id="bgVideo" autoplay muted playsinline poster="assets/images/hero_poster.jpg" preload="auto">
+            <!-- PLAYS ONCE — NO LOOP — NO BLUR — SHARP STATIC FINAL FRAME (PRELOAD NONE FOR ULTRA FAST PAGE LOAD) -->
+            <video id="bgVideo" autoplay muted playsinline poster="assets/images/hero_poster.jpg" preload="none">
                 <source src="/video/bhojpuri-bg.mp4" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
@@ -1845,8 +1858,8 @@
         </div>
     </div>
 
-    <!-- YOUTUBE IFRAME PLAYER API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
+    <!-- YOUTUBE IFRAME PLAYER API (ASYNC NON-BLOCKING SCRIPT INJECTION) -->
+    <script src="https://www.youtube.com/iframe_api" async></script>
 
     <!-- ALL-IN-ONE EMBEDDED JAVASCRIPT ENGINE -->
     <script>
