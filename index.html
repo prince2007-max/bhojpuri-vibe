@@ -2080,6 +2080,7 @@
 
         // Clean playlist switching without destroying or recreating the iframe/player
         function loadSingerPlaylist(playlistId, autoPlay = true) {
+            YOUTUBE_PLAYLIST_ID = playlistId;
             if (ytPlayerReady && ytPlayer && typeof ytPlayer.loadPlaylist === 'function') {
                 try {
                     ytPlayer.loadPlaylist({
@@ -2091,7 +2092,7 @@
                     if (autoPlay) {
                         playAudio();
                     }
-                    syncPlaylistFromYouTube();
+                    syncPlaylistFromYouTube(autoPlay);
                     return;
                 } catch(e) {
                     debugLog("loadSingerPlaylist error:", e);
@@ -2334,7 +2335,7 @@
         }
 
         // 3. DYNAMIC YOUTUBE PLAYLIST SYNC (FULL PLAYLIST RSS PARSING)
-        function syncPlaylistFromYouTube() {
+        function syncPlaylistFromYouTube(autoPlay = false) {
             const playlistId = YOUTUBE_PLAYLIST_ID;
             if (!playlistId) return;
 
@@ -2343,8 +2344,16 @@
                 .then(data => {
                     if (data && Array.isArray(data.items) && data.items.length > 0) {
                         playlistStore = data.items;
+                        currentTrackIndex = 0;
                         renderPlaylistDrawer();
                         syncCurrentVideoMetadata();
+
+                        if (autoPlay && ytPlayerReady && ytPlayer && playlistStore[0] && playlistStore[0].videoId) {
+                            try {
+                                ytPlayer.loadVideoById(playlistStore[0].videoId);
+                                playAudio();
+                            } catch(e) {}
+                        }
                         return;
                     }
                     fallbackSyncFromPlayer();
