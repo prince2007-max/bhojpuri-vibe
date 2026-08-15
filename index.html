@@ -1866,13 +1866,21 @@
         /* ==========================================================================
            BHOJPURI VIBE — YOUTUBE PLAYLIST METADATA & REAL PRESENCE ENGINE
            ========================================================================== */
-
         // Global Image Error Fallback Handler (Prevents 'Unexpected identifier http' SyntaxErrors)
         function handleImgError(el, color = '%23222') {
             if (!el) return;
             el.onerror = null;
             el.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="${color}"><rect width="100" height="100"/></svg>`;
         }
+
+        // CENTRAL BHOJPURI PLAYLIST CONFIGURATION LOCK (SOURCE OF TRUTH)
+        const PLAYLISTS = {
+            khesari: "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb",
+            pawan: "PLHoEe5Zf1FIc",
+            kallu: "PLxxkl-pkbhGaAHAdjz7bXVG2Ug25Bac-Y",
+            nirahua: "PLpj9eyegyBetvUcSUE0Df8BdxsbObHIYi",
+            tophits: "PLE47nOrXysyE"
+        };
 
         // BHOJPURI SINGER PLAYLIST CONFIGURATION & ARTWORK
         const SINGER_PLAYLISTS = [
@@ -1881,7 +1889,7 @@
                 name: 'Khesari Lal Yadav',
                 label: 'Khesari Lal',
                 subtitle: 'Khesari Lal Yadav Hits',
-                playlistId: 'PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb',
+                playlistId: PLAYLISTS.khesari,
                 bgType: 'image',
                 bgSrc: 'video/khesari.png',
                 image: 'video/khesari.png',
@@ -1895,7 +1903,7 @@
                 name: 'Pawan Singh',
                 label: 'Pawan Singh',
                 subtitle: 'Pawan Singh Superhits',
-                playlistId: 'PLHoEe5Zf1FIc',
+                playlistId: PLAYLISTS.pawan,
                 bgType: 'video',
                 bgSrc: 'video/bhojpuri-bg.mp4',
                 image: 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'120\' viewBox=\'0 0 120 120\'><defs><linearGradient id=\'pawanGrad\' x1=\'0%\' y1=\'0%\' x2=\'100%\' y2=\'100%\'><stop offset=\'0%\' stop-color=\'%23DC2626\'/><stop offset=\'100%\' stop-color=\'%23991B1B\'/></linearGradient></defs><circle cx=\'60\' cy=\'60\' r=\'60\' fill=\'url(%23pawanGrad)\'/><text x=\'50%\' y=\'45%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23fff\' font-size=\'36\' font-weight=\'bold\' font-family=\'sans-serif\'>P</text><text x=\'50%\' y=\'72%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23fff\' font-size=\'13\' font-weight=\'800\' font-family=\'sans-serif\'>PAWAN</text></svg>',
@@ -1909,7 +1917,7 @@
                 name: 'Arvind Akela Kallu',
                 label: 'Arvind Kallu',
                 subtitle: 'Arvind Akela Kallu Hits',
-                playlistId: 'PLxxkl-pkbhGaAHAdjz7bXVG2Ug25Bac-Y',
+                playlistId: PLAYLISTS.kallu,
                 bgType: 'image',
                 bgSrc: 'video/kallu.png',
                 image: 'video/kallu.png',
@@ -1923,7 +1931,7 @@
                 name: 'Nirahua (Dinesh Lal Yadav)',
                 label: 'Nirahua',
                 subtitle: 'Dinesh Lal Yadav Nirahua Hits',
-                playlistId: 'PLpj9eyegyBetvUcSUE0Df8BdxsbObHIYi',
+                playlistId: PLAYLISTS.nirahua,
                 bgType: 'image',
                 bgSrc: 'video/nirhua.png',
                 image: 'video/nirhua.png',
@@ -1937,7 +1945,7 @@
                 name: 'Bhojpuri Top Hits',
                 label: 'Top Hits',
                 subtitle: 'Bhojpuri Hit Songs Collection',
-                playlistId: 'PLE47nOrXysyE',
+                playlistId: PLAYLISTS.tophits,
                 bgType: 'image',
                 bgSrc: 'video/bhojpurihits.png',
                 image: 'video/bhojpurihits.png',
@@ -1949,7 +1957,7 @@
         ];
 
         let currentSingerId = 'khesari';
-        let YOUTUBE_PLAYLIST_ID = "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb";
+        let YOUTUBE_PLAYLIST_ID = PLAYLISTS.khesari;
         let playlistStore = [];
         let currentTrackIndex = 0;
         let isPlaying = false;
@@ -1960,6 +1968,73 @@
         let ytPlayer = null;
         let ytPlayerReady = false;
         let trackSyncInterval = null;
+
+        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION
+        function initOrReloadYouTubePlayer(playlistId, autoPlay = false) {
+            if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+                try {
+                    ytPlayer.destroy();
+                } catch (e) {}
+            }
+
+            const wrapper = document.getElementById('ytPlayerWrapper');
+            if (wrapper) {
+                wrapper.innerHTML = '<div id="youtubePlayer"></div>';
+            }
+
+            ytPlayerReady = false;
+            ytPlayer = new YT.Player('youtubePlayer', {
+                height: '1',
+                width: '1',
+                playerVars: {
+                    listType: 'playlist',
+                    list: playlistId,
+                    autoplay: autoPlay ? 1 : 0,
+                    controls: 0,
+                    disablekb: 1,
+                    fs: 0,
+                    modestbranding: 1,
+                    rel: 0,
+                    playsinline: 1
+                },
+                events: {
+                    'onReady': () => {
+                        ytPlayerReady = true;
+                        syncPlaylistFromYouTube();
+
+                        // SHUFFLE START: Pick a random track on playlist switch so it never plays track #1 (FIFO)
+                        const ids = ytPlayer.getPlaylist();
+                        if (Array.isArray(ids) && ids.length > 1) {
+                            const randomTrackIdx = Math.floor(Math.random() * ids.length);
+                            ytPlayer.playVideoAt(randomTrackIdx);
+                        } else if (autoPlay) {
+                            playAudio();
+                        }
+
+                        startTrackSyncLoop();
+                    },
+                    'onStateChange': (e) => {
+                        syncCurrentVideoMetadata();
+                        if (e.data === YT.PlayerState.PLAYING) {
+                            isPlaying = true;
+                            updatePlayPauseUI(true);
+                            if (musicCapsule) musicCapsule.classList.add('playing');
+                        } else if (e.data === YT.PlayerState.PAUSED) {
+                            isPlaying = false;
+                            updatePlayPauseUI(false);
+                            if (musicCapsule) musicCapsule.classList.remove('playing');
+                        } else if (e.data === YT.PlayerState.ENDED) {
+                            if (repeatMode === 'one') {
+                                if (ytPlayerReady) ytPlayer.seekTo(0, true);
+                                playAudio();
+                            } else {
+                                playNext();
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         // DOM Elements
         const capsuleArtwork = document.getElementById('capsuleArtwork');
@@ -2163,9 +2238,8 @@
             }
         }
 
-        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (SINGLETON LIFECYCLE MANAGEMENT)
+        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (OFFICIAL ORIGIN & LIFECYCLE MANAGEMENT)
         const PLAYER_ORIGIN = window.location.origin;
-        let isInitializingPlayer = false;
 
         function initOrReloadYouTubePlayer(playlistId, autoPlay = false) {
             // Re-use active player instance on playlist switch if ready to prevent duplicate iframe postMessage conflicts
@@ -2184,9 +2258,6 @@
                 }
             }
 
-            if (isInitializingPlayer) return;
-            isInitializingPlayer = true;
-
             if (ytPlayer && typeof ytPlayer.destroy === 'function') {
                 try {
                     ytPlayer.destroy();
@@ -2202,6 +2273,7 @@
             ytPlayer = new YT.Player('youtubePlayer', {
                 height: '1',
                 width: '1',
+                host: 'https://www.youtube.com',
                 playerVars: {
                     enablejsapi: 1,
                     origin: PLAYER_ORIGIN,
@@ -2217,7 +2289,6 @@
                 },
                 events: {
                     'onReady': () => {
-                        isInitializingPlayer = false;
                         ytPlayerReady = true;
                         syncPlaylistFromYouTube();
 
