@@ -2557,6 +2557,60 @@
         }
 
         // 4. METADATA SYNCHRONIZATION WITH ACTIVE YOUTUBE TRACK
+        // 4. METADATA SYNCHRONIZATION WITH ACTIVE YOUTUBE TRACK & BACKGROUND AUDIO
+        let bgAudioEngine = null;
+        function initBackgroundAudioEngine() {
+            if (!bgAudioEngine) {
+                try {
+                    bgAudioEngine = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+                    bgAudioEngine.loop = true;
+                } catch(e) {}
+            }
+        }
+
+        function setupMediaSession() {
+            if (!('mediaSession' in navigator)) return;
+            const handlers = [
+                ['play', () => playAudio()],
+                ['pause', () => pauseAudio()],
+                ['previoustrack', () => playPrev()],
+                ['nexttrack', () => playNext()],
+                ['stop', () => pauseAudio()],
+                ['seekto', (details) => {
+                    if (details.seekTime !== undefined && ytPlayerReady && ytPlayer && typeof ytPlayer.seekTo === 'function') {
+                        ytPlayer.seekTo(details.seekTime, true);
+                    }
+                }]
+            ];
+            handlers.forEach(([action, fn]) => {
+                try { navigator.mediaSession.setActionHandler(action, fn); } catch(e) {}
+            });
+        }
+
+        function syncMediaSession(title, artist, artworkUrl) {
+            if (!('mediaSession' in navigator)) return;
+            try {
+                const currentSinger = SINGER_PLAYLISTS.find(s => s.id === currentSingerId);
+                const displayAuthor = artist || (currentSinger ? currentSinger.name : "Bhojpuri Vibe");
+                const displayTitle = title || (capsuleTitle ? capsuleTitle.textContent : "Bhojpuri Vibe");
+                const thumb = artworkUrl || (capsuleArtwork ? capsuleArtwork.src : "");
+
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: displayTitle,
+                    artist: displayAuthor,
+                    album: 'Bhojpuri Vibe',
+                    artwork: [
+                        { src: thumb, sizes: '96x96', type: 'image/jpeg' },
+                        { src: thumb, sizes: '128x128', type: 'image/jpeg' },
+                        { src: thumb, sizes: '192x192', type: 'image/jpeg' },
+                        { src: thumb, sizes: '256x256', type: 'image/jpeg' },
+                        { src: thumb, sizes: '512x512', type: 'image/jpeg' }
+                    ]
+                });
+                navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+            } catch(e) {}
+        }
+
         function syncCurrentVideoMetadata() {
             if (!ytPlayerReady || !ytPlayer || !ytPlayer.getVideoData) return;
 
@@ -2588,60 +2642,88 @@
                 const currentSinger = SINGER_PLAYLISTS.find(s => s.id === currentSingerId);
                 const displayAuthor = currentSinger ? currentSinger.name : (activeAuthor || "Bhojpuri Vibe");
 
-                if (capsuleTitle.textContent !== displayTitle) capsuleTitle.textContent = displayTitle;
-                if (mobTitle.textContent !== displayTitle) mobTitle.textContent = displayTitle;
+                const tabTitle = document.getElementById('tabTitle');
+                const tabArtist = document.getElementById('tabArtist');
+
+                if (capsuleTitle) capsuleTitle.textContent = displayTitle;
+                if (mobTitle) mobTitle.textContent = displayTitle;
+                if (tabTitle) tabTitle.textContent = displayTitle;
                 if (capsuleBannerTitle) capsuleBannerTitle.textContent = displayTitle;
 
                 if (capsuleArtist) capsuleArtist.textContent = displayAuthor;
                 if (mobArtist) mobArtist.textContent = displayAuthor;
+                if (tabArtist) tabArtist.textContent = displayAuthor;
 
-                capsuleArtwork.src = activeThumb;
-                mobArtwork.src = activeThumb;
+                if (capsuleArtwork) capsuleArtwork.src = activeThumb;
+                if (mobArtwork) mobArtwork.src = activeThumb;
                 if (tabArtwork) tabArtwork.src = activeThumb;
                 if (capsuleBannerThumb) capsuleBannerThumb.src = activeThumb;
 
                 const activeIdx = playlistStore.findIndex(item => item.videoId === activeVideoId);
                 if (activeIdx !== -1) {
                     currentTrackIndex = activeIdx;
-                    trackCountBadge.textContent = `${activeIdx + 1} / ${playlistStore.length}`;
-                    mobTrackCountBadge.textContent = `${activeIdx + 1} / ${playlistStore.length}`;
+                    if (trackCountBadge) trackCountBadge.textContent = `${activeIdx + 1} / ${playlistStore.length}`;
+                    if (mobTrackCountBadge) mobTrackCountBadge.textContent = `${activeIdx + 1} / ${playlistStore.length}`;
                     highlightActiveDrawerRow(activeVideoId);
                 }
+
+                syncMediaSession(displayTitle, displayAuthor, activeThumb);
             }
         }
 
         function playVideoByIndex(index) {
-            if (index < 0 || index >= playlistStore.length) return;
+            if (!playlistStore || playlistStore.length === 0) return;
+            if (index < 0) index = playlistStore.length - 1;
+            if (index >= playlistStore.length) index = 0;
+
             currentTrackIndex = index;
-            if (ytPlayerReady && ytPlayer && ytPlayer.playVideoAt) {
-                ytPlayer.playVideoAt(index);
-            } else if (ytPlayerReady && ytPlayer && ytPlayer.loadVideoById) {
-                ytPlayer.loadVideoById(playlistStore[index].videoId);
+            const song = playlistStore[index];
+            if (!song) return;
+
+            if (ytPlayerReady && ytPlayer) {
+                if (song.videoId && typeof ytPlayer.loadVideoById === 'function') {
+                    ytPlayer.loadVideoById(song.videoId);
+                } else if (typeof ytPlayer.playVideoAt === 'function') {
+                    ytPlayer.playVideoAt(index);
+                }
             }
             playAudio();
             syncCurrentVideoMetadata();
         }
 
         function playAudio() {
-            if (ytPlayerReady && ytPlayer && ytPlayer.playVideo) {
+            initBackgroundAudioEngine();
+            if (bgAudioEngine) {
+                bgAudioEngine.play().catch(() => {});
+            }
+            if (ytPlayerReady && ytPlayer && typeof ytPlayer.playVideo === 'function') {
                 ytPlayer.playVideo();
             }
             isPlaying = true;
             updatePlayPauseUI(true);
-            musicCapsule.classList.add('playing');
+            if (musicCapsule) musicCapsule.classList.add('playing');
             const miniPill = document.getElementById('miniSpeakerPill');
             if (miniPill) miniPill.classList.add('playing');
+
+            syncMediaSession();
         }
 
         function pauseAudio() {
-            if (ytPlayerReady && ytPlayer && ytPlayer.pauseVideo) {
+            if (bgAudioEngine) {
+                bgAudioEngine.pause();
+            }
+            if (ytPlayerReady && ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
                 ytPlayer.pauseVideo();
             }
             isPlaying = false;
             updatePlayPauseUI(false);
-            musicCapsule.classList.remove('playing');
+            if (musicCapsule) musicCapsule.classList.remove('playing');
             const miniPill = document.getElementById('miniSpeakerPill');
             if (miniPill) miniPill.classList.remove('playing');
+
+            if ('mediaSession' in navigator) {
+                try { navigator.mediaSession.playbackState = 'paused'; } catch(e) {}
+            }
         }
 
         function togglePlayPause() {
@@ -2672,20 +2754,22 @@
         }
 
         function playNext() {
+            if (!playlistStore || playlistStore.length === 0) return;
             if (isShuffle) {
                 let randomIndex;
                 do {
-                    randomIndex = Math.floor(Math.random() * (playlistStore.length || 1));
+                    randomIndex = Math.floor(Math.random() * playlistStore.length);
                 } while (randomIndex === currentTrackIndex && playlistStore.length > 1);
                 playVideoByIndex(randomIndex);
             } else {
-                const nextIndex = (currentTrackIndex + 1) % (playlistStore.length || 1);
+                const nextIndex = (currentTrackIndex + 1) % playlistStore.length;
                 playVideoByIndex(nextIndex);
             }
         }
 
         function playPrev() {
-            const prevIndex = (currentTrackIndex - 1 + (playlistStore.length || 1)) % (playlistStore.length || 1);
+            if (!playlistStore || playlistStore.length === 0) return;
+            const prevIndex = (currentTrackIndex - 1 + playlistStore.length) % playlistStore.length;
             playVideoByIndex(prevIndex);
         }
 
@@ -2709,6 +2793,26 @@
                         if (mobProgressFill) mobProgressFill.style.width = `${progressPercent}%`;
                         if (mobCurrentTimeEl) mobCurrentTimeEl.textContent = formatTime(currentTime);
                         if (mobTotalDurationEl) mobTotalDurationEl.textContent = formatTime(duration);
+
+                        const tabProgressBar = document.getElementById('tabProgressBar');
+                        const tabProgressFill = document.getElementById('tabProgressFill');
+                        const tabCurrentTimeEl = document.getElementById('tabCurrentTime');
+                        const tabTotalDurationEl = document.getElementById('tabTotalDuration');
+
+                        if (tabProgressBar) tabProgressBar.value = progressPercent;
+                        if (tabProgressFill) tabProgressFill.style.width = `${progressPercent}%`;
+                        if (tabCurrentTimeEl) tabCurrentTimeEl.textContent = formatTime(currentTime);
+                        if (tabTotalDurationEl) tabTotalDurationEl.textContent = formatTime(duration);
+
+                        if ('mediaSession' in navigator && navigator.mediaSession.setPositionState && duration > 0 && currentTime >= 0) {
+                            try {
+                                navigator.mediaSession.setPositionState({
+                                    duration: duration,
+                                    playbackRate: 1,
+                                    position: Math.min(currentTime, duration)
+                                });
+                            } catch(e) {}
+                        }
                     }
                 }
             }, 300);
@@ -2757,12 +2861,13 @@
 
             playlistStore.forEach((song, idx) => {
                 const isActive = idx === currentTrackIndex;
-                const ytThumb = `https://img.youtube.com/vi/${song.videoId}/hqdefault.jpg`;
+                const ytThumb = song.thumbnail || `https://img.youtube.com/vi/${song.videoId}/hqdefault.jpg`;
                 const trackNum = (idx + 1) < 10 ? `0${idx + 1}` : `${idx + 1}`;
 
                 const row = document.createElement('div');
                 row.className = `playlist-item-row ${isActive ? 'active' : ''}`;
                 row.setAttribute('data-video-id', song.videoId);
+                row.setAttribute('data-index', idx);
                 row.innerHTML = `
                     <span class="item-num">${trackNum}</span>
                     <img src="${ytThumb}" alt="${song.title}" class="item-thumb" onerror="handleImgError(this, '%23222')">
@@ -2782,20 +2887,34 @@
         }
 
         function highlightActiveDrawerRow(activeVideoId) {
-            document.querySelectorAll('.playlist-item-row').forEach(row => {
-                const isMatch = row.getAttribute('data-video-id') === activeVideoId;
+            document.querySelectorAll('.playlist-item-row').forEach((row, idx) => {
+                const isMatch = (row.getAttribute('data-video-id') === activeVideoId) || (idx === currentTrackIndex);
                 row.classList.toggle('active', isMatch);
             });
         }
 
         // 6. EVENT LISTENERS
         function setupEventListeners() {
-            playPauseBtn.addEventListener('click', togglePlayPause);
-            mobPlayPauseBtn.addEventListener('click', togglePlayPause);
-            nextBtn.addEventListener('click', playNext);
-            prevBtn.addEventListener('click', playPrev);
-            mobNextBtn.addEventListener('click', playNext);
-            mobPrevBtn.addEventListener('click', playPrev);
+            setupMediaSession();
+
+            if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
+            if (mobPlayPauseBtn) mobPlayPauseBtn.addEventListener('click', togglePlayPause);
+            if (nextBtn) nextBtn.addEventListener('click', playNext);
+            if (prevBtn) prevBtn.addEventListener('click', playPrev);
+            if (mobNextBtn) mobNextBtn.addEventListener('click', playNext);
+            if (mobPrevBtn) mobPrevBtn.addEventListener('click', playPrev);
+
+            const tabNextBtn = document.getElementById('tabNextBtn');
+            const tabPrevBtn = document.getElementById('tabPrevBtn');
+            const tabPlayPauseBtn = document.getElementById('tabPlayPauseBtn');
+            const tabShuffleBtn = document.getElementById('tabShuffleBtn');
+            const tabRepeatBtn = document.getElementById('tabRepeatBtn');
+            const tabProgressBar = document.getElementById('tabProgressBar');
+
+            if (tabNextBtn) tabNextBtn.addEventListener('click', playNext);
+            if (tabPrevBtn) tabPrevBtn.addEventListener('click', playPrev);
+            if (tabPlayPauseBtn) tabPlayPauseBtn.addEventListener('click', togglePlayPause);
+            if (tabProgressBar) tabProgressBar.addEventListener('input', seek);
 
             if (capsulePlayBtn) {
                 capsulePlayBtn.addEventListener('click', togglePlayPause);
@@ -2848,43 +2967,59 @@
                 });
             }
 
-            shuffleBtn.addEventListener('click', () => {
-                isShuffle = !isShuffle;
-                shuffleBtn.classList.toggle('active-mode', isShuffle);
-                mobShuffleBtn.classList.toggle('active-mode', isShuffle);
-            });
-            mobShuffleBtn.addEventListener('click', () => {
-                isShuffle = !isShuffle;
-                shuffleBtn.classList.toggle('active-mode', isShuffle);
-                mobShuffleBtn.classList.toggle('active-mode', isShuffle);
-            });
+            if (shuffleBtn) {
+                shuffleBtn.addEventListener('click', () => {
+                    isShuffle = !isShuffle;
+                    shuffleBtn.classList.toggle('active-mode', isShuffle);
+                    if (mobShuffleBtn) mobShuffleBtn.classList.toggle('active-mode', isShuffle);
+                    if (tabShuffleBtn) tabShuffleBtn.classList.toggle('active-mode', isShuffle);
+                });
+            }
+            if (mobShuffleBtn) {
+                mobShuffleBtn.addEventListener('click', () => {
+                    isShuffle = !isShuffle;
+                    if (shuffleBtn) shuffleBtn.classList.toggle('active-mode', isShuffle);
+                    mobShuffleBtn.classList.toggle('active-mode', isShuffle);
+                    if (tabShuffleBtn) tabShuffleBtn.classList.toggle('active-mode', isShuffle);
+                });
+            }
+            if (tabShuffleBtn) {
+                tabShuffleBtn.addEventListener('click', () => {
+                    isShuffle = !isShuffle;
+                    if (shuffleBtn) shuffleBtn.classList.toggle('active-mode', isShuffle);
+                    if (mobShuffleBtn) mobShuffleBtn.classList.toggle('active-mode', isShuffle);
+                    tabShuffleBtn.classList.toggle('active-mode', isShuffle);
+                });
+            }
 
-            repeatBtn.addEventListener('click', toggleRepeat);
-            mobRepeatBtn.addEventListener('click', toggleRepeat);
+            if (repeatBtn) repeatBtn.addEventListener('click', toggleRepeat);
+            if (mobRepeatBtn) mobRepeatBtn.addEventListener('click', toggleRepeat);
+            if (tabRepeatBtn) tabRepeatBtn.addEventListener('click', toggleRepeat);
 
             function toggleRepeat() {
                 if (repeatMode === 'off') repeatMode = 'one';
                 else if (repeatMode === 'one') repeatMode = 'all';
                 else repeatMode = 'off';
 
-                repeatBtn.classList.toggle('active-mode', repeatMode !== 'off');
-                mobRepeatBtn.classList.toggle('active-mode', repeatMode !== 'off');
+                if (repeatBtn) repeatBtn.classList.toggle('active-mode', repeatMode !== 'off');
+                if (mobRepeatBtn) mobRepeatBtn.classList.toggle('active-mode', repeatMode !== 'off');
+                if (tabRepeatBtn) tabRepeatBtn.classList.toggle('active-mode', repeatMode !== 'off');
             }
 
-            progressBar.addEventListener('input', seek);
-            mobProgressBar.addEventListener('input', seek);
-            volumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
-            mobVolumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
+            if (progressBar) progressBar.addEventListener('input', seek);
+            if (mobProgressBar) mobProgressBar.addEventListener('input', seek);
+            if (volumeSlider) volumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
+            if (mobVolumeSlider) mobVolumeSlider.addEventListener('input', (e) => setVolume(e.target.value));
 
             // Drawer Toggles
             const toggleDrawer = () => {
                 queueDrawer.classList.toggle('open');
                 queueDrawerOverlay.classList.toggle('open');
             };
-            capsuleQueueBtn.addEventListener('click', toggleDrawer);
-            mobQueueBtn.addEventListener('click', toggleDrawer);
-            closeQueueBtn.addEventListener('click', toggleDrawer);
-            queueDrawerOverlay.addEventListener('click', toggleDrawer);
+            if (capsuleQueueBtn) capsuleQueueBtn.addEventListener('click', toggleDrawer);
+            if (mobQueueBtn) mobQueueBtn.addEventListener('click', toggleDrawer);
+            if (closeQueueBtn) closeQueueBtn.addEventListener('click', toggleDrawer);
+            if (queueDrawerOverlay) queueDrawerOverlay.addEventListener('click', toggleDrawer);
 
             // Fullscreen
             if (fullscreenBtn) {
