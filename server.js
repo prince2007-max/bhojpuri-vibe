@@ -152,8 +152,32 @@ app.get('/api/playlist-items', (req, res) => {
         return res.json(playlistCache.get(playlistId));
     }
 
+    fetchYouTubePlaylistFeed(playlistId, (items) => {
+        if (items && items.length > 0) {
+            const payload = { items };
+            setBoundedCache(playlistCache, playlistId, payload);
+            return res.json(payload);
+        }
+        res.json({ items: [] });
+    });
+});
+
+function fetchYouTubePlaylistFeed(playlistId, callback, redirectCount = 0) {
+    if (redirectCount > 3) return callback([]);
+
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
-    https.get(feedUrl, (ytRes) => {
+    const reqOptions = {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/xml, text/xml, */*'
+        }
+    };
+
+    https.get(feedUrl, reqOptions, (ytRes) => {
+        if (ytRes.statusCode >= 300 && ytRes.statusCode < 400 && ytRes.headers.location) {
+            return fetchYouTubePlaylistFeed(playlistId, callback, redirectCount + 1);
+        }
+
         let body = "";
         ytRes.on('data', chunk => body += chunk);
         ytRes.on('end', () => {
@@ -181,20 +205,15 @@ app.get('/api/playlist-items', (req, res) => {
                     }
                 });
 
-                if (items.length > 0) {
-                    const payload = { items };
-                    setBoundedCache(playlistCache, playlistId, payload);
-                    return res.json(payload);
-                }
-                res.json({ items: [] });
+                callback(items);
             } catch (err) {
-                res.json({ items: [] });
+                callback([]);
             }
         });
     }).on('error', () => {
-        res.json({ items: [] });
+        callback([]);
     });
-});
+}
 
 // Catch-all fallback route for client-side navigation
 app.get('*', (req, res) => {

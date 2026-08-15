@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="hitsBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDBA74"/>
+      <stop offset="50%" stop-color="#EA580C"/>
+      <stop offset="100%" stop-color="#9A3412"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#hitsBg)" stroke="#FFEDD5" stroke-width="4"/>
+  <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  <text x="50%" y="46%" dominant-baseline="middle" text-anchor="middle" fill="#FFFFFF" font-size="64" font-weight="900" font-family="-apple-system, BlinkMacSystemFont, sans-serif">⭐</text>
+  <text x="50%" y="74%" dominant-baseline="middle" text-anchor="middle" fill="#FFEDD5" font-size="16" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, sans-serif" letter-spacing="2">BHOJPURI HITS</text>
+</svg>
