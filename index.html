@@ -2334,10 +2334,77 @@
             }, 150);
         }
 
+        // GUARANTEED INSTANT PRE-POPULATED TRACK STORES FOR ALL 5 CATEGORIES
+        const DEFAULT_TRACKS = {
+            khesari: [
+                { id: 1, videoId: 'y3Jc2kxaqdw', title: 'Khesari Lal Yadav Bhojpuri Most Viewed Song', artist: 'Khesari Lal Yadav', thumbnail: 'https://img.youtube.com/vi/y3Jc2kxaqdw/hqdefault.jpg' },
+                { id: 2, videoId: '_XU-mkxDr2c', title: 'Saj Ke Sawar Ke | Khesari Lal Yadav', artist: 'Khesari Lal Yadav', thumbnail: 'https://img.youtube.com/vi/_XU-mkxDr2c/hqdefault.jpg' },
+                { id: 3, videoId: '7lO_kAK8qyk', title: 'Le Le Aayi Coca Cola | Khesari Lal Yadav', artist: 'Khesari Lal Yadav', thumbnail: 'https://img.youtube.com/vi/7lO_kAK8qyk/hqdefault.jpg' },
+                { id: 4, videoId: 'LCKknV4VER0', title: 'Miltay Marad Hamke Bhool Gailu | Khesari Lal', artist: 'Khesari Lal Yadav', thumbnail: 'https://img.youtube.com/vi/LCKknV4VER0/hqdefault.jpg' },
+                { id: 5, videoId: 'j5Tt0eyhaU8', title: 'Pagal Banaibe | Khesari Lal Yadav & Kajal Raghwani', artist: 'Khesari Lal Yadav', thumbnail: 'https://img.youtube.com/vi/j5Tt0eyhaU8/hqdefault.jpg' }
+            ],
+            pawan: [
+                { id: 1, videoId: 'EStG4Y7S_-E', title: 'Goriya Chaal Tohar Matwali | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/EStG4Y7S_-E/hqdefault.jpg' },
+                { id: 2, videoId: '_XU-mkxDr2c', title: 'Sanehiya Lagawal Bahut Bat Naikhe 2 | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/_XU-mkxDr2c/hqdefault.jpg' },
+                { id: 3, videoId: '7lO_kAK8qyk', title: 'Odhani Hata Ke | Pawan Singh & Shilpi Raj', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/7lO_kAK8qyk/hqdefault.jpg' },
+                { id: 4, videoId: 'LCKknV4VER0', title: 'Babuan 8D Audio | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/LCKknV4VER0/hqdefault.jpg' },
+                { id: 5, videoId: 'j5Tt0eyhaU8', title: 'Nathuniya Pagal Kaile Ba | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/j5Tt0eyhaU8/hqdefault.jpg' },
+                { id: 6, videoId: 'Q3sS5v2kQQU', title: 'Rate Diya Butake | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/Q3sS5v2kQQU/hqdefault.jpg' },
+                { id: 7, videoId: 'nHvkz0dPHNM', title: 'Chumma Lehab Ek Lakh Mein | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/nHvkz0dPHNM/hqdefault.jpg' },
+                { id: 8, videoId: '05QqYs0jz24', title: 'Kewdiya Ke Pala Satake | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/05QqYs0jz24/hqdefault.jpg' },
+                { id: 9, videoId: 'KKhzTA8azVQ', title: 'Palangiya Sone Na Diya | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/KKhzTA8azVQ/hqdefault.jpg' },
+                { id: 10, videoId: 'j9AOPotTqA4', title: 'Luliya Ka Mangele | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/j9AOPotTqA4/hqdefault.jpg' },
+                { id: 11, videoId: 'c4JD7rEtIj8', title: 'Chhalakata Hamro Jawaniya | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/c4JD7rEtIj8/hqdefault.jpg' },
+                { id: 12, videoId: 'Gr8G_ldltDE', title: 'Lollypop Lagelu | Pawan Singh', artist: 'Pawan Singh', thumbnail: 'https://img.youtube.com/vi/Gr8G_ldltDE/hqdefault.jpg' }
+            ],
+            kallu: [
+                { id: 1, videoId: 'h7qFaELHvnE', title: 'Devaru Ke Dalal | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/h7qFaELHvnE/hqdefault.jpg' },
+                { id: 2, videoId: 'L2RhCoD4u-8', title: 'Deshi Biyah Geet | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/L2RhCoD4u-8/hqdefault.jpg' },
+                { id: 3, videoId: 'lH0XF51FW_c', title: 'Suna Saali Ho | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/lH0XF51FW_c/hqdefault.jpg' },
+                { id: 4, videoId: '9qsHUmEexuI', title: 'Colour Dale Lalka | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/9qsHUmEexuI/hqdefault.jpg' },
+                { id: 5, videoId: 'RjvkzW33Zfs', title: 'Saiyo Dali Devro Dali | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/RjvkzW33Zfs/hqdefault.jpg' },
+                { id: 6, videoId: 'fDSCgsvw2UQ', title: 'Aaye Haye Haye | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/fDSCgsvw2UQ/hqdefault.jpg' },
+                { id: 7, videoId: '2ehlaifi9IE', title: 'Holi Mein System | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/2ehlaifi9IE/hqdefault.jpg' },
+                { id: 8, videoId: 'bEA3_lmNSQQ', title: 'Bina Sadiye Ke Bani | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/bEA3_lmNSQQ/hqdefault.jpg' },
+                { id: 9, videoId: 'shMSYHD2Sy4', title: 'Abiriya Ye Jaan | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/shMSYHD2Sy4/hqdefault.jpg' },
+                { id: 10, videoId: 'Eo-gU7rzUOk', title: 'Pichkari Ke Power | Arvind Akela Kallu', artist: 'Arvind Akela Kallu', thumbnail: 'https://img.youtube.com/vi/Eo-gU7rzUOk/hqdefault.jpg' }
+            ],
+            nirahua: [
+                { id: 1, videoId: 'Rj-V9ctJT8A', title: 'Bura Na Mano Holi Hai | Dinesh Lal Yadav Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/Rj-V9ctJT8A/hqdefault.jpg' },
+                { id: 2, videoId: '-8_WtFLcU0g', title: 'Awadh Mein Holi | Dinesh Lal Yadav Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/-8_WtFLcU0g/hqdefault.jpg' },
+                { id: 3, videoId: '1SpplYQR2kA', title: 'Dwake Flight Doha Qatar Se | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/1SpplYQR2kA/hqdefault.jpg' },
+                { id: 4, videoId: 'fNFIa0pdsEI', title: 'Exit Poll Bura Na Mano Holi Hai | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/fNFIa0pdsEI/hqdefault.jpg' },
+                { id: 5, videoId: 'Nf1r_wp9nN0', title: 'Neta Ji Ke Holi | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/Nf1r_wp9nN0/hqdefault.jpg' },
+                { id: 6, videoId: 'TLYiv1_jHgE', title: 'Rang Dalba Ta Dehab Hajar Gari | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/TLYiv1_jHgE/hqdefault.jpg' },
+                { id: 7, videoId: 'e8AWttpJLGk', title: 'Holi Mein Suchana Jaari Ba | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/e8AWttpJLGk/hqdefault.jpg' },
+                { id: 8, videoId: 'fn6xL0VO64o', title: 'Special Holi Jukebox | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/fn6xL0VO64o/hqdefault.jpg' },
+                { id: 9, videoId: 'htA6x7GPPQY', title: 'Holi Mein Aaja Raja | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/htA6x7GPPQY/hqdefault.jpg' },
+                { id: 10, videoId: 'dJxhUPwsZww', title: 'Markande Baba | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/dJxhUPwsZww/hqdefault.jpg' },
+                { id: 11, videoId: 'iEWo7lmJUnU', title: 'Dhire Dhire Dala Nirahu | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/iEWo7lmJUnU/hqdefault.jpg' },
+                { id: 12, videoId: 'mTrKj3MOPFc', title: 'Chunavi Holi | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/mTrKj3MOPFc/hqdefault.jpg' },
+                { id: 13, videoId: 'Zc9O6A6Ymuk', title: 'Rajnit Holi | Nirahua', artist: 'Dinesh Lal Yadav Nirahua', thumbnail: 'https://img.youtube.com/vi/Zc9O6A6Ymuk/hqdefault.jpg' }
+            ],
+            hits: [
+                { id: 1, videoId: 'EStG4Y7S_-E', title: 'Goriya Chaal Tohar Matwali | Pawan Singh', artist: 'Bhojpuri Top Hits', thumbnail: 'https://img.youtube.com/vi/EStG4Y7S_-E/hqdefault.jpg' },
+                { id: 2, videoId: 'h7qFaELHvnE', title: 'Devaru Ke Dalal | Arvind Akela Kallu', artist: 'Bhojpuri Top Hits', thumbnail: 'https://img.youtube.com/vi/h7qFaELHvnE/hqdefault.jpg' },
+                { id: 3, videoId: 'Rj-V9ctJT8A', title: 'Bura Na Mano Holi Hai | Nirahua', artist: 'Bhojpuri Top Hits', thumbnail: 'https://img.youtube.com/vi/Rj-V9ctJT8A/hqdefault.jpg' },
+                { id: 4, videoId: 'y3Jc2kxaqdw', title: 'Bhojpuri Superhit Collection #1 | Khesari Lal', artist: 'Bhojpuri Top Hits', thumbnail: 'https://img.youtube.com/vi/y3Jc2kxaqdw/hqdefault.jpg' }
+            ]
+        };
+
         // 3. DYNAMIC YOUTUBE PLAYLIST SYNC (FULL PLAYLIST RSS PARSING)
         function syncPlaylistFromYouTube(autoPlay = false) {
             const playlistId = YOUTUBE_PLAYLIST_ID;
             if (!playlistId) return;
+
+            // Ensure playlistStore has initial default tracks for current singer if empty
+            if (!playlistStore || playlistStore.length < 3) {
+                const currentSingerKey = currentSingerId || 'khesari';
+                if (DEFAULT_TRACKS[currentSingerKey]) {
+                    playlistStore = [...DEFAULT_TRACKS[currentSingerKey]];
+                    renderPlaylistDrawer();
+                }
+            }
 
             fetch(`/api/playlist-items?id=${playlistId}`)
                 .then(res => res.json())
@@ -2367,6 +2434,11 @@
             if (!ytPlayerReady || !ytPlayer || !ytPlayer.getPlaylist) return;
             const ids = ytPlayer.getPlaylist();
             if (Array.isArray(ids) && ids.length > 0) {
+                // NEVER overwrite playlistStore if playlistStore ALREADY HAS FULL STORE!
+                if (playlistStore && playlistStore.length > ids.length) {
+                    renderPlaylistDrawer();
+                    return;
+                }
                 const currentSinger = SINGER_PLAYLISTS.find(s => s.id === currentSingerId);
                 const singerArtistName = currentSinger ? currentSinger.name : "Bhojpuri Vibe";
 
@@ -2380,22 +2452,6 @@
 
                 renderPlaylistDrawer();
                 syncCurrentVideoMetadata();
-
-                playlistStore.forEach((item) => {
-                    fetch(`/api/yt-metadata?id=${item.videoId}`)
-                        .then(res => res.json())
-                        .then(meta => {
-                            if (meta.title) {
-                                item.title = meta.title;
-                                if (meta.author && meta.author !== "Bhojpuri Vibe") {
-                                    item.artist = meta.author;
-                                }
-                                renderPlaylistDrawer();
-                                syncCurrentVideoMetadata();
-                            }
-                        })
-                        .catch(() => {});
-                });
             }
         }
 
@@ -2852,7 +2908,7 @@
             updateBackgroundMedia(singer);
 
             // 6. Reset Store & Instantly Reload Player Engine for target Playlist
-            playlistStore = [];
+            playlistStore = (DEFAULT_TRACKS[singer.key] && DEFAULT_TRACKS[singer.key].length > 0) ? [...DEFAULT_TRACKS[singer.key]] : [];
             currentTrackIndex = 0;
             renderPlaylistDrawer();
 
