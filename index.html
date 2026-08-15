@@ -2163,8 +2163,9 @@
             }
         }
 
-        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (OFFICIAL ORIGIN & LIFECYCLE MANAGEMENT)
+        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (SINGLETON LIFECYCLE MANAGEMENT)
         const PLAYER_ORIGIN = window.location.origin;
+        let isInitializingPlayer = false;
 
         function initOrReloadYouTubePlayer(playlistId, autoPlay = false) {
             // Re-use active player instance on playlist switch if ready to prevent duplicate iframe postMessage conflicts
@@ -2182,6 +2183,9 @@
                     console.log("YouTube loadPlaylist fallback:", e);
                 }
             }
+
+            if (isInitializingPlayer) return;
+            isInitializingPlayer = true;
 
             if (ytPlayer && typeof ytPlayer.destroy === 'function') {
                 try {
@@ -2201,7 +2205,6 @@
                 playerVars: {
                     enablejsapi: 1,
                     origin: PLAYER_ORIGIN,
-                    widget_referrer: PLAYER_ORIGIN,
                     listType: 'playlist',
                     list: playlistId,
                     autoplay: autoPlay ? 1 : 0,
@@ -2214,6 +2217,7 @@
                 },
                 events: {
                     'onReady': () => {
+                        isInitializingPlayer = false;
                         ytPlayerReady = true;
                         syncPlaylistFromYouTube();
 
