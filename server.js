@@ -143,7 +143,41 @@ app.get('/api/yt-metadata', (req, res) => {
     });
 });
 
-// YouTube Playlist Items Proxy Endpoint (Fetches full list of track video IDs, titles & authors)
+// CENTRAL PLAYLIST CONFIGURATION LOCK (SOURCE OF TRUTH)
+const PLAYLIST_SOURCES = {
+    pawan: { key: "pawan", name: "Pawan Singh", playlistId: "PLHoEe5Zf1FIc" },
+    khesari: { key: "khesari", name: "Khesari Lal Yadav", playlistId: "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb" },
+    nirahua: { key: "nirahua", name: "Nirahua (Dinesh Lal Yadav)", playlistId: "PLpj9eyegyBetvUcSUE0Df8BdxsbObHIYi" },
+    kallu: { key: "kallu", name: "Arvind Akela Kallu", playlistId: "PLxxkl-pkbhGaAHAdjz7bXVG2Ug25Bac-Y" },
+    hits: { key: "hits", name: "Bhojpuri Top Hits", playlistId: "PLE47nOrXysyE" },
+    allHits: { key: "hits", name: "Bhojpuri Top Hits", playlistId: "PLE47nOrXysyE" }
+};
+
+// Dynamic Playlist Endpoint: GET /api/playlists/:artist
+app.get('/api/playlists/:artist', (req, res) => {
+    const artistKey = req.params.artist;
+    const source = PLAYLIST_SOURCES[artistKey];
+
+    if (!source) {
+        return res.status(404).json({ error: "Unknown artist category", artistKey });
+    }
+
+    const playlistId = source.playlistId;
+    if (playlistCache.has(playlistId)) {
+        return res.json({ artist: source, items: playlistCache.get(playlistId).items });
+    }
+
+    fetchYouTubePlaylistFeed(playlistId, (items) => {
+        if (items && items.length > 0) {
+            const payload = { items };
+            setBoundedCache(playlistCache, playlistId, payload);
+            return res.json({ artist: source, items });
+        }
+        res.json({ artist: source, items: [] });
+    });
+});
+
+// YouTube Playlist Items Proxy Endpoint
 app.get('/api/playlist-items', (req, res) => {
     const playlistId = req.query.id;
     if (!playlistId) return res.status(400).json({ error: "Missing playlist ID" });
@@ -163,6 +197,61 @@ app.get('/api/playlist-items', (req, res) => {
 });
 
 function fetchYouTubePlaylistFeed(playlistId, callback, redirectCount = 0) {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (apiKey) {
+        return fetchYouTubePlaylistViaAPI(playlistId, apiKey, callback);
+    }
+    fetchYouTubePlaylistViaRSS(playlistId, callback, redirectCount);
+}
+
+function fetchYouTubePlaylistViaAPI(playlistId, apiKey, callback) {
+    let allItems = [];
+
+    function fetchPage(pageToken = "") {
+        const apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}${pageToken ? '&pageToken=' + pageToken : ''}`;
+
+        https.get(apiUrl, (ytRes) => {
+            let body = "";
+            ytRes.on('data', chunk => body += chunk);
+            ytRes.on('end', () => {
+                try {
+                    const data = JSON.parse(body);
+                    if (data && Array.isArray(data.items)) {
+                        data.items.forEach((item) => {
+                            const snippet = item.snippet || {};
+                            const videoId = snippet.resourceId ? snippet.resourceId.videoId : null;
+                            if (videoId) {
+                                allItems.push({
+                                    id: allItems.length + 1,
+                                    videoId: videoId,
+                                    title: snippet.title || "Bhojpuri Track",
+                                    artist: snippet.videoOwnerChannelTitle || snippet.channelTitle || "Bhojpuri Vibe",
+                                    thumbnail: snippet.thumbnails?.high?.url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                                });
+                            }
+                        });
+
+                        if (data.nextPageToken && allItems.length < 500) {
+                            fetchPage(data.nextPageToken);
+                        } else {
+                            callback(allItems);
+                        }
+                    } else {
+                        fetchYouTubePlaylistViaRSS(playlistId, callback);
+                    }
+                } catch (e) {
+                    fetchYouTubePlaylistViaRSS(playlistId, callback);
+                }
+            });
+        }).on('error', () => {
+            fetchYouTubePlaylistViaRSS(playlistId, callback);
+        });
+    }
+
+    fetchPage();
+}
+
+function fetchYouTubePlaylistViaRSS(playlistId, callback, redirectCount = 0) {
     if (redirectCount > 3) return callback([]);
 
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
@@ -175,7 +264,7 @@ function fetchYouTubePlaylistFeed(playlistId, callback, redirectCount = 0) {
 
     https.get(feedUrl, reqOptions, (ytRes) => {
         if (ytRes.statusCode >= 300 && ytRes.statusCode < 400 && ytRes.headers.location) {
-            return fetchYouTubePlaylistFeed(playlistId, callback, redirectCount + 1);
+            return fetchYouTubePlaylistViaRSS(playlistId, callback, redirectCount + 1);
         }
 
         let body = "";
