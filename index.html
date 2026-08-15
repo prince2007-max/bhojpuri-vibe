@@ -1863,9 +1863,24 @@
 
     <!-- ALL-IN-ONE EMBEDDED JAVASCRIPT ENGINE -->
     <script>
-        /* ==========================================================================
-           BHOJPURI VIBE — YOUTUBE PLAYLIST METADATA & REAL PRESENCE ENGINE
-           ========================================================================== */
+        // DEBUG LOGGING & STATE ARCHITECTURE
+        const DEBUG_MODE = false;
+        function debugLog(...args) {
+            if (DEBUG_MODE) {
+                console.log("[BHOJPURI VIBE]", ...args);
+            }
+        }
+
+        // SINGLE AUTHORITATIVE PLAYER STATE
+        const playerState = {
+            currentArtistKey: 'khesari',
+            currentPlaylistId: null,
+            currentVideoId: null,
+            playerReady: false,
+            youtubeApiReady: false,
+            playlistRequestId: 0
+        };
+
         // Global Image Error Fallback Handler (Prevents 'Unexpected identifier http' SyntaxErrors)
         function handleImgError(el, color = '%23222') {
             if (!el) return;
@@ -1954,6 +1969,25 @@
 
         const SINGER_PLAYLISTS = Object.values(PLAYLISTS);
 
+        // AUTOMATIC PLAYLIST VALIDATOR SYSTEM
+        function validatePlaylists() {
+            const seenIds = new Map();
+            Object.keys(PLAYLISTS).forEach(key => {
+                const p = PLAYLISTS[key];
+                if (!p || !p.playlistId) {
+                    debugLog(`[PLAYLIST CHECK] ${key} → FAIL: Missing playlist ID`);
+                } else if (!/^PL[a-zA-Z0-9_-]+$/.test(p.playlistId)) {
+                    debugLog(`[PLAYLIST CHECK] ${p.name} → FAIL: Malformed playlist ID (${p.playlistId})`);
+                } else if (seenIds.has(p.playlistId)) {
+                    debugLog(`[PLAYLIST CHECK] ${p.name} → FAIL: Duplicate playlist ID with ${seenIds.get(p.playlistId)}`);
+                } else {
+                    seenIds.set(p.playlistId, p.name);
+                    debugLog(`[PLAYLIST CHECK] ${p.name} → OK (${p.playlistId})`);
+                }
+            });
+        }
+        validatePlaylists();
+
         let currentSingerId = 'khesari';
         let YOUTUBE_PLAYLIST_ID = PLAYLISTS.khesari;
         let playlistStore = [];
@@ -2033,6 +2067,14 @@
                             } else {
                                 playNext();
                             }
+                        }
+                    },
+                    'onError': (e) => {
+                        debugLog("YouTube track error code:", e.data);
+                        if (ytPlayerReady && ytPlayer && typeof ytPlayer.nextVideo === 'function') {
+                            try {
+                                ytPlayer.nextVideo();
+                            } catch(err) {}
                         }
                     }
                 }
@@ -2709,6 +2751,10 @@
             const singer = PLAYLISTS[singerId] || SINGER_PLAYLISTS.find(s => s.id === singerId);
             if (!singer) return;
 
+            const requestId = ++playerState.playlistRequestId;
+            playerState.currentArtistKey = singer.key;
+            playerState.currentPlaylistId = singer.playlistId;
+
             currentSingerId = singer.id;
             YOUTUBE_PLAYLIST_ID = singer.playlistId;
 
@@ -2744,7 +2790,9 @@
             currentTrackIndex = 0;
             renderPlaylistDrawer();
 
-            initOrReloadYouTubePlayer(singer.playlistId, true);
+            if (requestId === playerState.playlistRequestId) {
+                initOrReloadYouTubePlayer(singer.playlistId, true);
+            }
 
             // 7. Show Toast Feedback
             showSingerToast(`🎤 Switched to ${singer.name} Playlist!`);
