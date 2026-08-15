@@ -11,16 +11,29 @@ const PORT = process.env.PORT || 3000;
 app.use(compression());
 app.use(express.json());
 
+// Enable CORS for API responses
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Parse .env file if available locally
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    envContent.split(/\r?\n/).forEach(line => {
-        const [key, ...vals] = line.split('=');
-        if (key && vals.length > 0) {
-            process.env[key.trim()] = vals.join('=').trim();
-        }
-    });
+    try {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split(/\r?\n/).forEach(line => {
+            const [key, ...vals] = line.split('=');
+            if (key && vals.length > 0) {
+                process.env[key.trim()] = vals.join('=').trim();
+            }
+        });
+    } catch (e) {}
 }
 
 const PLAYLIST_ID = process.env.YOUTUBE_PLAYLIST_ID || "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb";
@@ -32,7 +45,7 @@ const staticOptions = {
     etag: true
 };
 
-// Serve static files from root directory & /video endpoint with caching
+// Serve static files from root directory & static folders with caching
 app.use(express.static(path.join(__dirname), staticOptions));
 app.use('/video', express.static(path.join(__dirname, 'video'), staticOptions));
 app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
@@ -46,8 +59,17 @@ app.get('/', (req, res) => {
 const activeSessions = new Map(); // sessionId -> lastSeenTimestamp
 const SESSION_TTL = 10000; // 10 seconds TTL
 
-// In-Memory oEmbed Metadata Cache
+// In-Memory Caches with size limit (max 200 items)
 const metadataCache = new Map();
+const playlistCache = new Map();
+
+function setBoundedCache(map, key, val, maxSize = 200) {
+    if (map.size >= maxSize) {
+        const firstKey = map.keys().next().value;
+        map.delete(firstKey);
+    }
+    map.set(key, val);
+}
 
 // Clean expired sessions periodically
 setInterval(() => {
@@ -75,25 +97,9 @@ app.get('/api/live-count', (req, res) => {
 
 // Config API endpoint
 app.get('/api/config', (req, res) => {
-    let currentPlaylistId = "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb";
-    let currentBgVideo = "/video/bhojpuri-bg.mp4";
-    if (fs.existsSync(envPath)) {
-        try {
-            const envContent = fs.readFileSync(envPath, 'utf8');
-            envContent.split(/\r?\n/).forEach(line => {
-                const parts = line.split('=');
-                if (parts.length >= 2) {
-                    const k = parts[0].trim();
-                    const v = parts.slice(1).join('=').trim();
-                    if (k === 'YOUTUBE_PLAYLIST_ID' && v) currentPlaylistId = v;
-                    if (k === 'BACKGROUND_ANIMATION' && v) currentBgVideo = v;
-                }
-            });
-        } catch (e) {}
-    }
     res.json({
-        playlistId: currentPlaylistId,
-        bgVideo: currentBgVideo
+        playlistId: process.env.YOUTUBE_PLAYLIST_ID || PLAYLIST_ID,
+        bgVideo: process.env.BACKGROUND_ANIMATION || BG_VIDEO
     });
 });
 
@@ -118,7 +124,7 @@ app.get('/api/yt-metadata', (req, res) => {
                     author: data.author_name || "Bhojpuri Vibe",
                     thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                 };
-                metadataCache.set(videoId, result);
+                setBoundedCache(metadataCache, videoId, result);
                 res.json(result);
             } catch (err) {
                 res.json({
@@ -128,15 +134,16 @@ app.get('/api/yt-metadata', (req, res) => {
                 });
             }
         });
-    }).on('error', (e) => {
+    }).on('error', () => {
         res.json({
             title: "YouTube Track",
             author: "Bhojpuri Vibe",
             thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
         });
-// YouTube Playlist Items Proxy Endpoint (Fetches full list of track video IDs, titles & authors)
-const playlistCache = new Map();
+    });
+});
 
+// YouTube Playlist Items Proxy Endpoint (Fetches full list of track video IDs, titles & authors)
 app.get('/api/playlist-items', (req, res) => {
     const playlistId = req.query.id;
     if (!playlistId) return res.status(400).json({ error: "Missing playlist ID" });
@@ -175,15 +182,16 @@ app.get('/api/playlist-items', (req, res) => {
                 });
 
                 if (items.length > 0) {
-                    playlistCache.set(playlistId, { items });
-                    return res.json({ items });
+                    const payload = { items };
+                    setBoundedCache(playlistCache, playlistId, payload);
+                    return res.json(payload);
                 }
                 res.json({ items: [] });
             } catch (err) {
                 res.json({ items: [] });
             }
         });
-    }).on('error', (e) => {
+    }).on('error', () => {
         res.json({ items: [] });
     });
 });
@@ -191,6 +199,14 @@ app.get('/api/playlist-items', (req, res) => {
 // Catch-all fallback route for client-side navigation
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Global Process Crash Prevention
+process.on('uncaughtException', (err) => {
+    console.error('[SERVER WARN] Uncaught Exception:', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[SERVER WARN] Unhandled Rejection:', reason);
 });
 
 // Start Express Server bound to 0.0.0.0 for Render/Cloud compatibility
