@@ -1852,6 +1852,10 @@
                 <span class="drawer-subtitle-badge" id="drawerHeaderBadge">Loading tracks...</span>
             </div>
             <div class="drawer-header-right" style="display:flex;align-items:center;gap:8px;">
+                <button class="util-icon-btn" id="mixSongsBtn" title="Mix / Shuffle Playlist Queue" style="background:rgba(255,42,109,0.2);border:1px solid rgba(255,42,109,0.4);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <span>🔀</span>
+                    <span>Mix Songs</span>
+                </button>
                 <button class="util-icon-btn" id="manualSyncBtn" title="Sync Live YouTube Playlist" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
                     <span id="syncIcon" style="display:inline-block;transition:transform 0.5s ease;">🔄</span>
                     <span id="syncStatusMsg">Sync</span>
@@ -2362,7 +2366,17 @@
         }
         validateLivePlaylists();
 
-        // LOCAL STORAGE CACHE ENGINE
+        // LOCAL STORAGE CACHE ENGINE & PLAYLIST RANDOMIZER / MIXER
+        function shufflePlaylistStore(array) {
+            if (!Array.isArray(array) || array.length <= 1) return array;
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
         function getLocalPlaylistCache(artistId) {
             try {
                 const raw = localStorage.getItem('bv_playlist_' + artistId);
@@ -2402,7 +2416,7 @@
             if ((!playlistStore || playlistStore.length === 0) && !isBackground) {
                 const localCached = getLocalPlaylistCache(singer.id);
                 if (localCached && localCached.length > 0) {
-                    playlistStore = localCached;
+                    playlistStore = shufflePlaylistStore(localCached);
                     renderPlaylistDrawer();
                     syncCurrentVideoMetadata();
                 }
@@ -2446,15 +2460,17 @@
                         console.log(`[PLAYLIST SYNC] New items: ${addedItems.length}`);
                         console.log(`[PLAYLIST SYNC] Removed items: ${removedItems.length}`);
 
-                        // Preserve active playback track index
+                        // Shuffle items into randomized mix queue while preserving active playback track
                         const activeTrack = oldStore[currentTrackIndex];
-                        playlistStore = newItems;
+                        playlistStore = shufflePlaylistStore(newItems);
 
                         if (activeTrack) {
                             const newIdx = playlistStore.findIndex(item => item.videoId === activeTrack.videoId);
                             if (newIdx !== -1) {
                                 currentTrackIndex = newIdx;
                             }
+                        } else {
+                            currentTrackIndex = 0;
                         }
 
                         // Save fresh data to local cache
@@ -2521,13 +2537,28 @@
             }
         });
 
-        // Manual Refresh Button Event Listener
+        // Manual Refresh & Mix Songs Button Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
             const manualBtn = document.getElementById('manualSyncBtn');
             if (manualBtn) {
                 manualBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     syncLivePlaylist(currentSingerId, false, false, true);
+                });
+            }
+            const mixBtn = document.getElementById('mixSongsBtn');
+            if (mixBtn) {
+                mixBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (playlistStore && playlistStore.length > 1) {
+                        playlistStore = shufflePlaylistStore(playlistStore);
+                        currentTrackIndex = 0;
+                        renderPlaylistDrawer();
+                        syncCurrentVideoMetadata();
+                        if (typeof showSingerToast === 'function') {
+                            showSingerToast("🔀 Playlist Mixed randomly!");
+                        }
+                    }
                 });
             }
         });
