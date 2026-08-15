@@ -164,16 +164,27 @@ app.get('/api/playlists/:artist', (req, res) => {
 
     const playlistId = source.playlistId;
     if (playlistCache.has(playlistId)) {
-        return res.json({ artist: source, items: playlistCache.get(playlistId).items });
+        const cached = playlistCache.get(playlistId);
+        return res.json({
+            artist: source,
+            items: cached.items,
+            totalItems: cached.items.length,
+            pagesFetched: cached.pagesFetched || 1
+        });
     }
 
-    fetchYouTubePlaylistFeed(playlistId, (items) => {
+    fetchYouTubePlaylistFeed(playlistId, (items, pagesFetched) => {
         if (items && items.length > 0) {
-            const payload = { items };
+            const payload = { items, pagesFetched: pagesFetched || 1 };
             setBoundedCache(playlistCache, playlistId, payload);
-            return res.json({ artist: source, items });
+            return res.json({
+                artist: source,
+                items,
+                totalItems: items.length,
+                pagesFetched: pagesFetched || 1
+            });
         }
-        res.json({ artist: source, items: [] });
+        res.json({ artist: source, items: [], totalItems: 0, pagesFetched: 0 });
     });
 });
 
@@ -183,32 +194,44 @@ app.get('/api/playlist-items', (req, res) => {
     if (!playlistId) return res.status(400).json({ error: "Missing playlist ID" });
 
     if (playlistCache.has(playlistId)) {
-        return res.json(playlistCache.get(playlistId));
+        const cached = playlistCache.get(playlistId);
+        return res.json({
+            items: cached.items,
+            totalItems: cached.items.length,
+            pagesFetched: cached.pagesFetched || 1
+        });
     }
 
-    fetchYouTubePlaylistFeed(playlistId, (items) => {
+    fetchYouTubePlaylistFeed(playlistId, (items, pagesFetched) => {
         if (items && items.length > 0) {
-            const payload = { items };
+            const payload = { items, pagesFetched: pagesFetched || 1 };
             setBoundedCache(playlistCache, playlistId, payload);
-            return res.json(payload);
+            return res.json({
+                items,
+                totalItems: items.length,
+                pagesFetched: pagesFetched || 1
+            });
         }
-        res.json({ items: [] });
+        res.json({ items: [], totalItems: 0, pagesFetched: 0 });
     });
 });
 
-function fetchYouTubePlaylistFeed(playlistId, callback, redirectCount = 0) {
+function fetchYouTubePlaylistFeed(playlistId, callback) {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (apiKey) {
         return fetchYouTubePlaylistViaAPI(playlistId, apiKey, callback);
     }
-    fetchYouTubePlaylistViaRSS(playlistId, callback, redirectCount);
+    fetchYouTubePlaylistViaScraper(playlistId, callback);
 }
 
 function fetchYouTubePlaylistViaAPI(playlistId, apiKey, callback) {
     let allItems = [];
+    let pageCount = 0;
+    const seenVideoIds = new Set();
 
     function fetchPage(pageToken = "") {
-        const apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}${pageToken ? '&pageToken=' + pageToken : ''}`;
+        pageCount++;
+        const apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${apiKey}${pageToken ? '&pageToken=' + pageToken : ''}`;
 
         https.get(apiUrl, (ytRes) => {
             let body = "";
@@ -216,43 +239,126 @@ function fetchYouTubePlaylistViaAPI(playlistId, apiKey, callback) {
             ytRes.on('end', () => {
                 try {
                     const data = JSON.parse(body);
-                    if (data && Array.isArray(data.items)) {
-                        data.items.forEach((item) => {
-                            const snippet = item.snippet || {};
-                            const videoId = snippet.resourceId ? snippet.resourceId.videoId : null;
-                            if (videoId) {
-                                allItems.push({
-                                    id: allItems.length + 1,
-                                    videoId: videoId,
-                                    title: snippet.title || "Bhojpuri Track",
-                                    artist: snippet.videoOwnerChannelTitle || snippet.channelTitle || "Bhojpuri Vibe",
-                                    thumbnail: snippet.thumbnails?.high?.url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-                                });
-                            }
-                        });
+                    const items = data.items || [];
+                    const hasNextPage = !!data.nextPageToken;
 
-                        if (data.nextPageToken && allItems.length < 500) {
-                            fetchPage(data.nextPageToken);
-                        } else {
-                            callback(allItems);
+                    console.log(`[PLAYLIST FETCH] Playlist: ${playlistId} | Page: ${pageCount} | Items: ${items.length} | Next page: ${hasNextPage ? 'YES' : 'NO'}`);
+
+                    items.forEach((item) => {
+                        const snippet = item.snippet || {};
+                        const videoId = (item.contentDetails && item.contentDetails.videoId) || (snippet.resourceId && snippet.resourceId.videoId);
+
+                        if (videoId && snippet.title !== 'Private video' && snippet.title !== 'Deleted video' && !seenVideoIds.has(videoId)) {
+                            seenVideoIds.add(videoId);
+                            allItems.push({
+                                id: allItems.length + 1,
+                                videoId: videoId,
+                                title: snippet.title || "Bhojpuri Track",
+                                artist: snippet.videoOwnerChannelTitle || snippet.channelTitle || "Bhojpuri Vibe",
+                                thumbnail: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                            });
                         }
+                    });
+
+                    if (data.nextPageToken && allItems.length < 500) {
+                        fetchPage(data.nextPageToken);
                     } else {
-                        fetchYouTubePlaylistViaRSS(playlistId, callback);
+                        console.log(`[PLAYLIST FETCH COMPLETE] Playlist: ${playlistId} | Total: ${allItems.length} | Pages: ${pageCount}`);
+                        callback(allItems, pageCount);
                     }
                 } catch (e) {
-                    fetchYouTubePlaylistViaRSS(playlistId, callback);
+                    console.error(`[PLAYLIST FETCH ERROR] API parse error on page ${pageCount}:`, e.message);
+                    if (allItems.length > 0) {
+                        callback(allItems, pageCount);
+                    } else {
+                        fetchYouTubePlaylistViaScraper(playlistId, callback);
+                    }
                 }
             });
-        }).on('error', () => {
-            fetchYouTubePlaylistViaRSS(playlistId, callback);
+        }).on('error', (err) => {
+            console.error(`[PLAYLIST FETCH ERROR] HTTP error on page ${pageCount}:`, err.message);
+            if (allItems.length > 0) {
+                callback(allItems, pageCount);
+            } else {
+                fetchYouTubePlaylistViaScraper(playlistId, callback);
+            }
         });
     }
 
     fetchPage();
 }
 
+function fetchYouTubePlaylistViaScraper(playlistId, callback) {
+    const url = `https://www.youtube.com/playlist?list=${playlistId}`;
+    const reqOptions = {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+    };
+
+    console.log(`[PLAYLIST FETCH] Playlist: ${playlistId} | Fetching full HTML page items...`);
+
+    https.get(url, reqOptions, (res) => {
+        let body = "";
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => {
+            try {
+                const allItems = [];
+                const seenVideoIds = new Set();
+
+                const videoBlockRegex = /"playlistVideoRenderer":\{"videoId":"([^"]+)","title":\{"runs":\[\{"text":"([^"]+)"\}\]/g;
+                let match;
+                while ((match = videoBlockRegex.exec(body)) !== null) {
+                    const videoId = match[1];
+                    const rawTitle = match[2];
+
+                    if (videoId && !seenVideoIds.has(videoId) && rawTitle !== 'Private video' && rawTitle !== 'Deleted video') {
+                        seenVideoIds.add(videoId);
+                        const title = rawTitle.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+                        allItems.push({
+                            id: allItems.length + 1,
+                            videoId: videoId,
+                            title: title,
+                            artist: "Bhojpuri Vibe",
+                            thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                        });
+                    }
+                }
+
+                if (allItems.length === 0) {
+                    const idRegex = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
+                    while ((match = idRegex.exec(body)) !== null) {
+                        const videoId = match[1];
+                        if (videoId && !seenVideoIds.has(videoId)) {
+                            seenVideoIds.add(videoId);
+                            allItems.push({
+                                id: allItems.length + 1,
+                                videoId: videoId,
+                                title: `Track ${allItems.length + 1}`,
+                                artist: "Bhojpuri Vibe",
+                                thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                            });
+                        }
+                    }
+                }
+
+                console.log(`[PLAYLIST FETCH COMPLETE] Playlist: ${playlistId} | Total: ${allItems.length} | Pages: 1 (Full HTML Scraped)`);
+                callback(allItems, 1);
+            } catch (err) {
+                console.error(`[PLAYLIST FETCH ERROR] Scraper error for ${playlistId}:`, err.message);
+                fetchYouTubePlaylistViaRSS(playlistId, callback);
+            }
+        });
+    }).on('error', (err) => {
+        console.error(`[PLAYLIST FETCH ERROR] Scraper network error for ${playlistId}:`, err.message);
+        fetchYouTubePlaylistViaRSS(playlistId, callback);
+    });
+}
+
 function fetchYouTubePlaylistViaRSS(playlistId, callback, redirectCount = 0) {
-    if (redirectCount > 3) return callback([]);
+    if (redirectCount > 3) return callback([], 1);
 
     const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
     const reqOptions = {
@@ -294,13 +400,13 @@ function fetchYouTubePlaylistViaRSS(playlistId, callback, redirectCount = 0) {
                     }
                 });
 
-                callback(items);
+                callback(items, 1);
             } catch (err) {
-                callback([]);
+                callback([], 1);
             }
         });
     }).on('error', () => {
-        callback([]);
+        callback([], 1);
     });
 }
 
