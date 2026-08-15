@@ -1998,6 +1998,9 @@
 
         // 2. YOUTUBE IFRAME PLAYER API SINGLE-PLAYER ARCHITECTURE (NO DUPLICATE PLAYERS)
         let youtubePlayer = null;
+        let ytPlayer = null;
+        let ytPlayerReady = false;
+        let trackSyncInterval = null;
         let youtubePlayerInstanceCount = 0;
         let youtubeApiPromise = null;
         let isInitializingPlayer = false;
@@ -2515,28 +2518,39 @@
         }
 
         function startTrackSyncLoop() {
-            if (trackSyncInterval) clearInterval(trackSyncInterval);
+            if (trackSyncInterval !== null) return;
             trackSyncInterval = setInterval(() => {
-                syncCurrentVideoMetadata();
+                try {
+                    syncCurrentVideoMetadata();
 
-                if (ytPlayerReady && ytPlayer && ytPlayer.getCurrentTime) {
-                    const currentTime = ytPlayer.getCurrentTime() || 0;
-                    const duration = ytPlayer.getDuration() || 0;
+                    if (ytPlayerReady && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                        const currentTime = ytPlayer.getCurrentTime() || 0;
+                        const duration = ytPlayer.getDuration() || 0;
 
-                    if (duration > 0) {
-                        const progressPercent = (currentTime / duration) * 100;
-                        if (progressBar) progressBar.value = progressPercent;
-                        if (progressFill) progressFill.style.width = `${progressPercent}%`;
-                        if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
-                        if (totalDurationEl) totalDurationEl.textContent = formatTime(duration);
+                        if (duration > 0) {
+                            const progressPercent = (currentTime / duration) * 100;
+                            if (progressBar) progressBar.value = progressPercent;
+                            if (progressFill) progressFill.style.width = `${progressPercent}%`;
+                            if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
+                            if (totalDurationEl) totalDurationEl.textContent = formatTime(duration);
 
-                        if (mobProgressBar) mobProgressBar.value = progressPercent;
-                        if (mobProgressFill) mobProgressFill.style.width = `${progressPercent}%`;
-                        if (mobCurrentTimeEl) mobCurrentTimeEl.textContent = formatTime(currentTime);
-                        if (mobTotalDurationEl) mobTotalDurationEl.textContent = formatTime(duration);
+                            if (mobProgressBar) mobProgressBar.value = progressPercent;
+                            if (mobProgressFill) mobProgressFill.style.width = `${progressPercent}%`;
+                            if (mobCurrentTimeEl) mobCurrentTimeEl.textContent = formatTime(currentTime);
+                            if (mobTotalDurationEl) mobTotalDurationEl.textContent = formatTime(duration);
+                        }
                     }
+                } catch(err) {
+                    debugLog("Track sync loop error:", err);
                 }
             }, 300);
+        }
+
+        function stopTrackSyncLoop() {
+            if (trackSyncInterval !== null) {
+                clearInterval(trackSyncInterval);
+                trackSyncInterval = null;
+            }
         }
 
         function seek(e) {
