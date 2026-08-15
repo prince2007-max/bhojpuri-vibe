@@ -2150,8 +2150,26 @@
             }
         }
 
-        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (DYNAMIC INSTANTIATION)
+        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (OFFICIAL ORIGIN & LIFECYCLE MANAGEMENT)
+        const PLAYER_ORIGIN = window.location.origin;
+
         function initOrReloadYouTubePlayer(playlistId, autoPlay = false) {
+            // Re-use active player instance on playlist switch if ready to prevent duplicate iframe postMessage conflicts
+            if (ytPlayerReady && ytPlayer && typeof ytPlayer.loadPlaylist === 'function') {
+                try {
+                    ytPlayer.loadPlaylist({
+                        listType: 'playlist',
+                        list: playlistId
+                    });
+                    if (autoPlay) {
+                        playAudio();
+                    }
+                    return;
+                } catch (e) {
+                    console.log("YouTube loadPlaylist fallback:", e);
+                }
+            }
+
             if (ytPlayer && typeof ytPlayer.destroy === 'function') {
                 try {
                     ytPlayer.destroy();
@@ -2167,7 +2185,10 @@
             ytPlayer = new YT.Player('youtubePlayer', {
                 height: '1',
                 width: '1',
+                host: 'https://www.youtube.com',
                 playerVars: {
+                    enablejsapi: 1,
+                    origin: PLAYER_ORIGIN,
                     listType: 'playlist',
                     list: playlistId,
                     autoplay: autoPlay ? 1 : 0,
@@ -2176,8 +2197,7 @@
                     fs: 0,
                     modestbranding: 1,
                     rel: 0,
-                    playsinline: 1,
-                    origin: window.location.origin
+                    playsinline: 1
                 },
                 events: {
                     'onReady': () => {
@@ -2200,11 +2220,11 @@
                         if (e.data === YT.PlayerState.PLAYING) {
                             isPlaying = true;
                             updatePlayPauseUI(true);
-                            musicCapsule.classList.add('playing');
+                            if (musicCapsule) musicCapsule.classList.add('playing');
                         } else if (e.data === YT.PlayerState.PAUSED) {
                             isPlaying = false;
                             updatePlayPauseUI(false);
-                            musicCapsule.classList.remove('playing');
+                            if (musicCapsule) musicCapsule.classList.remove('playing');
                         } else if (e.data === YT.PlayerState.ENDED) {
                             if (repeatMode === 'one') {
                                 if (ytPlayerReady) ytPlayer.seekTo(0, true);
