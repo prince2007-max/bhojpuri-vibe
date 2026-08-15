@@ -1914,7 +1914,7 @@
                 playlistId: 'PLHoEe5Zf1FIc',
                 bgType: 'video',
                 bgSrc: 'video/bhojpuri-bg.mp4',
-                image: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><defs><linearGradient id="pawanGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23DC2626"/><stop offset="100%" stop-color="%23991B1B"/></linearGradient></defs><circle cx="60" cy="60" r="60" fill="url(%23pawanGrad)"/><text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="%23fff" font-size="36" font-weight="bold" font-family="sans-serif">P</text><text x="50%" y="72%" dominant-baseline="middle" text-anchor="middle" fill="%23fff" font-size="13" font-weight="800" font-family="sans-serif">PAWAN</text></svg>',
+                image: 'assets/images/pawan-avatar.svg',
                 accentColor: '#DC2626',
                 accentGlow: 'rgba(220, 38, 38, 0.5)',
                 brandGradient: 'linear-gradient(135deg, #F87171 0%, #DC2626 50%, #991B1B 100%)',
@@ -2001,18 +2001,17 @@
         let ytPlayerReady = false;
         let trackSyncInterval = null;
 
-        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (SINGLE PERSISTENT BACKGROUND PLAYER)
+        // 2. YOUTUBE IFRAME PLAYER API INTEGRATION (SINGLE PERSISTENT PLAYER LIFECYCLE)
         const PLAYER_ORIGIN = window.location.origin;
 
-        function initOrReloadYouTubePlayer(playlistId, autoPlay = false) {
-            if (ytPlayer && typeof ytPlayer.destroy === 'function') {
-                try {
-                    ytPlayer.destroy();
-                } catch (e) {}
+        function initSingleYouTubePlayer(playlistId) {
+            if (ytPlayer || ytPlayerReady) {
+                loadSingerPlaylist(playlistId, false);
+                return;
             }
 
             const wrapper = document.getElementById('ytPlayerWrapper');
-            if (wrapper) {
+            if (wrapper && !document.getElementById('youtubePlayer')) {
                 wrapper.innerHTML = '<div id="youtubePlayer"></div>';
             }
 
@@ -2026,7 +2025,7 @@
                     origin: PLAYER_ORIGIN,
                     listType: 'playlist',
                     list: playlistId,
-                    autoplay: autoPlay ? 1 : 0,
+                    autoplay: 0,
                     controls: 0,
                     disablekb: 1,
                     fs: 0,
@@ -2037,15 +2036,13 @@
                 events: {
                     'onReady': () => {
                         ytPlayerReady = true;
+                        playerState.playerReady = true;
                         syncPlaylistFromYouTube();
 
-                        // SHUFFLE START: Pick a random track on playlist switch so it never plays track #1 (FIFO)
                         const ids = ytPlayer.getPlaylist();
                         if (Array.isArray(ids) && ids.length > 1) {
                             const randomTrackIdx = Math.floor(Math.random() * ids.length);
-                            ytPlayer.playVideoAt(randomTrackIdx);
-                        } else if (autoPlay) {
-                            playAudio();
+                            try { ytPlayer.playVideoAt(randomTrackIdx); } catch(e) {}
                         }
 
                         startTrackSyncLoop();
@@ -2079,6 +2076,30 @@
                     }
                 }
             });
+        }
+
+        // Clean playlist switching without destroying or recreating the iframe/player
+        function loadSingerPlaylist(playlistId, autoPlay = true) {
+            if (ytPlayerReady && ytPlayer && typeof ytPlayer.loadPlaylist === 'function') {
+                try {
+                    ytPlayer.loadPlaylist({
+                        listType: 'playlist',
+                        list: playlistId,
+                        index: 0,
+                        startSeconds: 0
+                    });
+                    if (autoPlay) {
+                        playAudio();
+                    }
+                    syncPlaylistFromYouTube();
+                    return;
+                } catch(e) {
+                    debugLog("loadSingerPlaylist error:", e);
+                }
+            }
+            if (!ytPlayer) {
+                initSingleYouTubePlayer(playlistId);
+            }
         }
 
         // DOM Elements
@@ -2293,12 +2314,12 @@
 
         function checkInitYTPlayer() {
             if (!ytPlayer && window.YT && window.YT.Player) {
-                initOrReloadYouTubePlayer(YOUTUBE_PLAYLIST_ID, false);
+                initSingleYouTubePlayer(YOUTUBE_PLAYLIST_ID);
             }
         }
 
         window.onYouTubeIframeAPIReady = function() {
-            initOrReloadYouTubePlayer(YOUTUBE_PLAYLIST_ID, false);
+            initSingleYouTubePlayer(YOUTUBE_PLAYLIST_ID);
         };
 
         if (window.YT && window.YT.Player) {
@@ -2827,7 +2848,7 @@
             renderPlaylistDrawer();
 
             if (requestId === playerState.playlistRequestId) {
-                initOrReloadYouTubePlayer(singer.playlistId, true);
+                loadSingerPlaylist(singer.playlistId, true);
             }
 
             // 7. Show Toast Feedback
