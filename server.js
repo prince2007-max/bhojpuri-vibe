@@ -4,11 +4,11 @@ const fs = require('fs');
 const https = require('https');
 
 const app = express();
-const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Parse .env file if available
+// Parse .env file if available locally
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
@@ -23,9 +23,14 @@ if (fs.existsSync(envPath)) {
 const PLAYLIST_ID = process.env.YOUTUBE_PLAYLIST_ID || "PLFgOISmN8jwf4bBX_VSZLEK-_6Xh8e5fb";
 const BG_VIDEO = process.env.BACKGROUND_ANIMATION || "/video/bhojpuri-bg.mp4";
 
-// Serve static files
+// Serve static files from root directory & /video endpoint
 app.use(express.static(path.join(__dirname)));
 app.use('/video', express.static(path.join(__dirname, 'video')));
+
+// Explicit homepage route to guarantee root index.html is served on Render
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // REAL-TIME VISITOR PRESENCE REGISTRY
 const activeSessions = new Map(); // sessionId -> lastSeenTimestamp
@@ -122,28 +127,16 @@ app.get('/api/yt-metadata', (req, res) => {
     });
 });
 
-// Route all other requests to index.html
+// Catch-all fallback route for client-side navigation
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-function startServer(port) {
-    const server = app.listen(port, () => {
-        console.log(`====================================================`);
-        console.log(`🎬 BHOJPURI VIBE SERVER RUNNING`);
-        console.log(`🎵 YouTube Playlist ID: ${PLAYLIST_ID}`);
-        console.log(`🔊 Listening at: http://localhost:${port}`);
-        console.log(`====================================================`);
-    });
-
-    server.on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-            console.log(`⚠️ Port ${port} is in use, retrying on port ${port + 1}...`);
-            startServer(port + 1);
-        } else {
-            console.error('Server error:', err);
-        }
-    });
-}
-
-startServer(DEFAULT_PORT);
+// Start Express Server bound to 0.0.0.0 for Render/Cloud compatibility
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`====================================================`);
+    console.log(`🎬 BHOJPURI VIBE SERVER RUNNING ON RENDER / CLOUD`);
+    console.log(`🎵 YouTube Playlist ID: ${PLAYLIST_ID}`);
+    console.log(`🔊 Listening at: http://0.0.0.0:${PORT}`);
+    console.log(`====================================================`);
+});
