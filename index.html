@@ -704,6 +704,49 @@
             pointer-events: none;
         }
 
+        /* CAPSULE CONTACT & CREDIT BAR */
+        .capsule-contact-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 3px 12px 5px 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.75);
+            letter-spacing: 0.02em;
+        }
+        .capsule-contact-bar .contact-name {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .capsule-contact-bar .contact-name i {
+            color: var(--red-accent);
+            font-size: 10px;
+        }
+        .capsule-contact-bar .contact-dot {
+            opacity: 0.4;
+        }
+        .capsule-contact-bar .contact-email {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .capsule-contact-bar .contact-email:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        .capsule-contact-bar .contact-email i {
+            color: var(--red-accent);
+            font-size: 10px;
+        }
+
         /* DESKTOP CAPSULE LAYOUT (> 991px) */
         .capsule-desktop {
             display: flex;
@@ -1883,6 +1926,15 @@
                     <span class="track-count-badge" id="mobTrackCountBadge">1 / --</span>
                 </div>
             </div>
+
+            <!-- CAPSULE BOTTOM CONTACT & CREDITS BAR -->
+            <div class="capsule-contact-bar">
+                <span class="contact-name"><i class="fa-solid fa-user-check"></i> Prince Mishra</span>
+                <span class="contact-dot">•</span>
+                <a href="mailto:prince998428@gmail.com" class="contact-email" title="Contact via Email">
+                    <i class="fa-solid fa-envelope"></i> prince998428@gmail.com
+                </a>
+            </div>
         </div>
 
         <!-- MINI FLOATING SPEAKER PILL (SHOWN WHEN CAPSULE IS MINIMIZED) -->
@@ -1910,11 +1962,11 @@
             <div class="drawer-header-right" style="display:flex;align-items:center;gap:8px;">
                 <button class="util-icon-btn" id="mixSongsBtn" title="Mix / Shuffle Playlist Queue" style="background:rgba(255,42,109,0.2);border:1px solid rgba(255,42,109,0.4);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
                     <i class="fa-solid fa-shuffle"></i>
-                    <span>Mix Songs</span>
+                
                 </button>
                 <button class="util-icon-btn" id="manualSyncBtn" title="Sync Live YouTube Playlist" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
                     <i class="fa-solid fa-rotate" id="syncIcon" style="display:inline-block;transition:transform 0.5s ease;"></i>
-                    <span id="syncStatusMsg">Sync</span>
+                   
                 </button>
                 <button class="close-btn" id="closeQueueBtn" title="Close Queue">&times;</button>
             </div>
