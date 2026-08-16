@@ -704,47 +704,56 @@
             pointer-events: none;
         }
 
-        /* CAPSULE CONTACT & CREDIT BAR */
-        .capsule-contact-bar {
+        /* EXTERNAL CONTACT FOOTER (OUTSIDE CAPSULE - DARK & BOLD) */
+        .external-contact-footer {
+            margin: 6px auto 8px auto;
+            text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 3px 12px 5px 12px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.75);
-            letter-spacing: 0.02em;
+            gap: 10px;
+            padding: 6px 16px;
+            background: rgba(10, 10, 14, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            width: fit-content;
+            max-width: 90vw;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            z-index: 90;
         }
-        .capsule-contact-bar .contact-name {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-weight: 600;
+        .external-contact-footer .ext-contact-name {
+            font-weight: 800;
+            font-size: 0.76rem;
             color: #ffffff;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
         }
-        .capsule-contact-bar .contact-name i {
+        .external-contact-footer .ext-contact-name i {
             color: var(--red-accent);
-            font-size: 10px;
+            margin-right: 4px;
         }
-        .capsule-contact-bar .contact-dot {
-            opacity: 0.4;
+        .external-contact-footer .ext-contact-dot {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 700;
         }
-        .capsule-contact-bar .contact-email {
+        .external-contact-footer .ext-contact-email {
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #ffffff;
+            text-decoration: none;
             display: flex;
             align-items: center;
-            gap: 4px;
-            color: rgba(255, 255, 255, 0.85);
-            text-decoration: none;
+            gap: 5px;
             transition: color 0.2s ease;
         }
-        .capsule-contact-bar .contact-email:hover {
-            color: #ffffff;
+        .external-contact-footer .ext-contact-email:hover {
+            color: var(--red-accent);
             text-decoration: underline;
         }
-        .capsule-contact-bar .contact-email i {
+        .external-contact-footer .ext-contact-email i {
             color: var(--red-accent);
-            font-size: 10px;
         }
 
         /* DESKTOP CAPSULE LAYOUT (> 991px) */
@@ -1926,15 +1935,15 @@
                     <span class="track-count-badge" id="mobTrackCountBadge">1 / --</span>
                 </div>
             </div>
+        </div>
 
-            <!-- CAPSULE BOTTOM CONTACT & CREDITS BAR -->
-            <div class="capsule-contact-bar">
-                <span class="contact-name"><i class="fa-solid fa-user-check"></i> Prince Mishra</span>
-                <span class="contact-dot">•</span>
-                <a href="mailto:prince998428@gmail.com" class="contact-email" title="Contact via Email">
-                    <i class="fa-solid fa-envelope"></i> prince998428@gmail.com
-                </a>
-            </div>
+        <!-- EXTERNAL FOOTER CONTACT (OUTSIDE CAPSULE - DARK & BOLD) -->
+        <div class="external-contact-footer">
+            <span class="ext-contact-name"><i class="fa-solid fa-user-check"></i> Prince Mishra</span>
+            <span class="ext-contact-dot">•</span>
+            <a href="mailto:prince998428@gmail.com" class="ext-contact-email" title="Contact via Email">
+                <i class="fa-solid fa-envelope"></i> prince998428@gmail.com
+            </a>
         </div>
 
         <!-- MINI FLOATING SPEAKER PILL (SHOWN WHEN CAPSULE IS MINIMIZED) -->
