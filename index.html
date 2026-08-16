@@ -25,6 +25,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Cinzel:wght@600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <!-- FONT AWESOME & GOOGLE MATERIAL ICONS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
     <!-- EARLY GLOBAL IMAGE ERROR HANDLER (Prevents ReferenceError on inline onerror attributes) -->
     <script>
         window.handleImgError = function(el, color) {
@@ -1187,21 +1192,38 @@
             font-size: 0.68rem;
             font-weight: 700;
             color: var(--white-dim);
-            min-width: 18px;
+            min-width: 20px;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .playlist-item-row.active .item-num {
-            color: var(--red-accent);
+        .playlist-item-row .row-play-icon {
+            display: none;
+            font-size: 10px;
+            color: #ffffff;
         }
+        .playlist-item-row:hover .num-text { display: none; }
+        .playlist-item-row:hover .row-play-icon { display: inline-block; }
+
+        .playlist-item-row.active .item-num { color: var(--red-accent); }
+        .playlist-item-row.active .num-text,
+        .playlist-item-row.active:hover .num-text { display: none; }
+        .playlist-item-row.active .row-play-icon { display: none; }
+        .playlist-item-row.active .active-disc-icon { display: inline-block !important; }
 
         .item-thumb {
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             border-radius: 8px;
             object-fit: cover;
             flex-shrink: 0;
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            transition: transform 0.2s ease;
+        }
+        .playlist-item-row:hover .item-thumb {
+            transform: scale(1.05);
         }
 
         .item-info {
@@ -1246,7 +1268,41 @@
             padding: 2px 6px;
             border-radius: 6px;
             flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
+
+        .item-row-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            opacity: 0.4;
+            transition: opacity 0.2s ease;
+        }
+        .playlist-item-row:hover .item-row-actions,
+        .playlist-item-row.active .item-row-actions {
+            opacity: 1;
+        }
+
+        .item-row-action-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .item-row-action-btn:hover {
+            color: #ffffff;
+            transform: scale(1.2);
+        }
+        .item-row-action-btn.fav-btn.active {
+            color: #ef4444;
+        }
+
         .hidden { display: none !important; }
 
         /* ==========================================================================
@@ -1848,21 +1904,31 @@
     <div class="side-drawer" id="queueDrawer">
         <div class="drawer-top">
             <div class="drawer-header-left">
-                <h3 class="drawer-title" id="drawerHeaderTitle">🎵 PLAYLIST QUEUE</h3>
+                <h3 class="drawer-title" id="drawerHeaderTitle"><i class="fa-solid fa-list-ul" style="margin-right:6px;"></i> PLAYLIST QUEUE</h3>
                 <span class="drawer-subtitle-badge" id="drawerHeaderBadge">Loading tracks...</span>
             </div>
             <div class="drawer-header-right" style="display:flex;align-items:center;gap:8px;">
                 <button class="util-icon-btn" id="mixSongsBtn" title="Mix / Shuffle Playlist Queue" style="background:rgba(255,42,109,0.2);border:1px solid rgba(255,42,109,0.4);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
-                    <span>🔀</span>
+                    <i class="fa-solid fa-shuffle"></i>
                     <span>Mix Songs</span>
                 </button>
                 <button class="util-icon-btn" id="manualSyncBtn" title="Sync Live YouTube Playlist" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:4px 10px;font-size:12px;color:#fff;display:flex;align-items:center;gap:5px;cursor:pointer;">
-                    <span id="syncIcon" style="display:inline-block;transition:transform 0.5s ease;">🔄</span>
+                    <i class="fa-solid fa-rotate" id="syncIcon" style="display:inline-block;transition:transform 0.5s ease;"></i>
                     <span id="syncStatusMsg">Sync</span>
                 </button>
                 <button class="close-btn" id="closeQueueBtn" title="Close Queue">&times;</button>
             </div>
         </div>
+
+        <!-- PLAYLIST SEARCH & FILTER BAR -->
+        <div class="drawer-search-wrapper" style="padding: 10px 0 6px 0;">
+            <div class="drawer-search-box" style="display:flex;align-items:center;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:6px 12px;gap:8px;">
+                <i class="fa-solid fa-magnifying-glass" style="color:var(--white-muted);font-size:12px;"></i>
+                <input type="text" id="drawerSearchInput" placeholder="Search playlist songs..." style="background:none;border:none;outline:none;color:#fff;font-size:12px;width:100%;font-family:inherit;">
+                <button id="clearDrawerSearchBtn" style="background:none;border:none;color:var(--white-muted);font-size:14px;cursor:pointer;display:none;">&times;</button>
+            </div>
+        </div>
+
         <div class="playlist-items-list" id="playlistDrawerList">
             <!-- Populated dynamically via YouTube API -->
         </div>
@@ -1999,7 +2065,7 @@
         validatePlaylists();
 
         let currentSingerId = 'khesari';
-        let YOUTUBE_PLAYLIST_ID = PLAYLISTS.khesari;
+        let YOUTUBE_PLAYLIST_ID = PLAYLISTS.khesari.playlistId;
         let playlistStore = [];
         let currentTrackIndex = 0;
         let isPlaying = false;
@@ -2875,8 +2941,8 @@
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
-        // 5. PLAYLIST DRAWER RENDERING (NATIVE CLEAN COMPACT UI)
-        function renderPlaylistDrawer() {
+        // 5. PLAYLIST DRAWER RENDERING (NATIVE CLEAN COMPACT UI WITH ICONS & SEARCH)
+        function renderPlaylistDrawer(filterQuery = '') {
             playlistDrawerList.innerHTML = '';
 
             const currentSinger = SINGER_PLAYLISTS.find(s => s.id === currentSingerId);
@@ -2884,13 +2950,35 @@
             const drawerHeaderBadge = document.getElementById('drawerHeaderBadge');
 
             if (drawerHeaderTitle && currentSinger) {
-                drawerHeaderTitle.textContent = `🎵 ${currentSinger.name} Queue`;
-            }
-            if (drawerHeaderBadge) {
-                drawerHeaderBadge.textContent = `${playlistStore.length} Songs Available`;
+                drawerHeaderTitle.innerHTML = `<i class="fa-solid fa-list-ul" style="margin-right:6px;"></i> ${currentSinger.name} Queue`;
             }
 
-            playlistStore.forEach((song, idx) => {
+            const query = (filterQuery || '').trim().toLowerCase();
+            const filteredSongs = playlistStore.filter(song => {
+                if (!query) return true;
+                return (song.title && song.title.toLowerCase().includes(query)) ||
+                       (song.artist && song.artist.toLowerCase().includes(query));
+            });
+
+            if (drawerHeaderBadge) {
+                drawerHeaderBadge.textContent = query 
+                    ? `${filteredSongs.length} / ${playlistStore.length} Songs` 
+                    : `${playlistStore.length} Songs Available`;
+            }
+
+            if (filteredSongs.length === 0) {
+                playlistDrawerList.innerHTML = `
+                    <div style="text-align:center;padding:30px 10px;color:var(--white-muted);font-size:13px;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size:24px;margin-bottom:8px;display:block;opacity:0.5;"></i>
+                        No songs found matching "${query}"
+                    </div>
+                `;
+                return;
+            }
+
+            filteredSongs.forEach((song) => {
+                const originalIndex = playlistStore.findIndex(s => s.videoId === song.videoId);
+                const idx = originalIndex !== -1 ? originalIndex : 0;
                 const isActive = idx === currentTrackIndex;
                 const ytThumb = song.thumbnail || `https://img.youtube.com/vi/${song.videoId}/hqdefault.jpg`;
                 const trackNum = (idx + 1) < 10 ? `0${idx + 1}` : `${idx + 1}`;
@@ -2900,18 +2988,23 @@
                 row.setAttribute('data-video-id', song.videoId);
                 row.setAttribute('data-index', idx);
                 row.innerHTML = `
-                    <span class="item-num">${trackNum}</span>
+                    <span class="item-num">
+                        <span class="num-text">${trackNum}</span>
+                        <i class="fa-solid fa-play row-play-icon"></i>
+                        <i class="fa-solid fa-compact-disc fa-spin active-disc-icon" style="display:none;color:var(--red-accent);font-size:13px;"></i>
+                    </span>
                     <img src="${ytThumb}" alt="${song.title}" class="item-thumb" onerror="handleImgError(this, '%23222')">
                     <div class="item-info">
                         <span class="item-title">${song.title}</span>
                         <span class="item-artist">${song.artist}</span>
                     </div>
-                    ${isActive ? '<span class="item-active-tag">PLAYING</span>' : ''}
+                    ${isActive ? '<span class="item-active-tag"><i class="fa-solid fa-volume-high fa-beat-fade"></i> PLAYING</span>' : ''}
+                    <div class="item-row-actions">
+                        <button class="item-row-action-btn play-btn" title="Play Song"><i class="fa-solid fa-play"></i></button>
+                    </div>
                 `;
-                row.addEventListener('click', () => {
+                row.addEventListener('click', (e) => {
                     playVideoByIndex(idx);
-                    queueDrawer.classList.remove('open');
-                    queueDrawerOverlay.classList.remove('open');
                 });
                 playlistDrawerList.appendChild(row);
             });
@@ -2927,6 +3020,27 @@
         // 6. EVENT LISTENERS
         function setupEventListeners() {
             setupMediaSession();
+
+            const drawerSearchInput = document.getElementById('drawerSearchInput');
+            const clearDrawerSearchBtn = document.getElementById('clearDrawerSearchBtn');
+            if (drawerSearchInput) {
+                drawerSearchInput.addEventListener('input', (e) => {
+                    const query = e.target.value;
+                    if (clearDrawerSearchBtn) {
+                        clearDrawerSearchBtn.style.display = query ? 'block' : 'none';
+                    }
+                    renderPlaylistDrawer(query);
+                });
+            }
+            if (clearDrawerSearchBtn) {
+                clearDrawerSearchBtn.addEventListener('click', () => {
+                    if (drawerSearchInput) {
+                        drawerSearchInput.value = '';
+                        clearDrawerSearchBtn.style.display = 'none';
+                        renderPlaylistDrawer('');
+                    }
+                });
+            }
 
             if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
             if (mobPlayPauseBtn) mobPlayPauseBtn.addEventListener('click', togglePlayPause);
